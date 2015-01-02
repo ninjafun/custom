@@ -20,7 +20,7 @@ namespace NinjaTrader.Strategy
     /// <summary>
     /// single timeframe with limit orders
     /// </summary>
-    [Description("single timeframe with limit orders")]
+    [Description("Trading on news events")]
     public class ScalpingLimit : Strategy
     {
         #region Variables
