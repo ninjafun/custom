@@ -1,0 +1,26 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2012
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "NinjaTrader.Custom", "NinjaTrader.Custom.csproj", "{39F94375-3631-4B74-B40E-F7A678E5B67D}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug64|Any CPU = Debug64|Any CPU
+		Release|Any CPU = Release|Any CPU
+		Release64|Any CPU = Release64|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{39F94375-3631-4B74-B40E-F7A678E5B67D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{39F94375-3631-4B74-B40E-F7A678E5B67D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{39F94375-3631-4B74-B40E-F7A678E5B67D}.Debug64|Any CPU.ActiveCfg = Debug64|Any CPU
+		{39F94375-3631-4B74-B40E-F7A678E5B67D}.Debug64|Any CPU.Build.0 = Debug64|Any CPU
+		{39F94375-3631-4B74-B40E-F7A678E5B67D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{39F94375-3631-4B74-B40E-F7A678E5B67D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{39F94375-3631-4B74-B40E-F7A678E5B67D}.Release64|Any CPU.ActiveCfg = Release64|Any CPU
+		{39F94375-3631-4B74-B40E-F7A678E5B67D}.Release64|Any CPU.Build.0 = Release64|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal

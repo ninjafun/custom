@@ -1,0 +1,147 @@
+namespace NinjaTrader.Indicator
+{
+    using NinjaTrader.Data;
+    using NinjaTrader.Gui.Chart;
+    using NinjaTrader.Gui.Design;
+    using System;
+    using System.ComponentModel;
+    using System.Drawing;
+    using System.Xml.Serialization;
+
+    [NinjaTrader.Gui.Design.DisplayName("TTM Wave C OC Gapless"), Description("TTM Wave C Open Code with gapless option")]
+    public class TTMWaveCOC : NinjaTrader.Indicator.Indicator
+    {
+        private string IndicatorName = "TTM Wave C OC Gapless";
+        private Color ppWaveContractionColor = Color.Crimson;
+        private Color ppWaveExpansionColor = Color.DarkOrange;
+		private bool useGapless = false;//Added Sim22
+		private bool showSponsor = true;//Added Sim22
+
+        protected override void Initialize()
+        {
+            base.Add(new Plot(new Pen(this.pWaveExpansionColor, 6f), PlotStyle.Bar, "Wave1"));
+            base.Add(new Plot(new Pen(this.pWaveContractionColor, 6f), PlotStyle.Bar, "Wave2"));
+            base.Add(new Line(Color.Gray, 0.0, "ZeroLine"));
+            base.Overlay = false;
+            base.PriceTypeSupported = false;
+            base.PaintPriceMarkers = false;
+			base.DrawOnPricePanel = false;//Added Sim22
+        }
+
+        protected override void OnBarUpdate()
+        {
+            if (base.CurrentBar >= 1)
+            {
+				if (showSponsor) DrawTextFixed("tag1", "www.ewef.net", TextPosition.BottomLeft);//Added Sim22
+                MACDGapless macd = base.MACDGapless(base.Close, 8, 0xe9, 1,useGapless); //gapless added Sim22
+                MACDGapless macd2 = base.MACDGapless(base.Close, 8, 0x179, 1,useGapless); //gapless added Sim22
+                double num = macd.Default[0];
+                double num2 = base.EMA(macd.Default, 0xe9)[0];
+                double num3 = num - num2;
+                this.Wave1.Set(num3);
+                double num4 = macd2.Default[0];
+                double num5 = base.EMA(macd2.Default, 0x179)[0];
+                double num6 = num4 - num5;
+                this.Wave2.Set(num6);
+            }
+        }
+
+        public override string ToString()
+        {
+            return this.IndicatorName;
+        }
+
+        [Category("Display"), Description("OutsideColor"), NinjaTrader.Gui.Design.DisplayName("c2_OutsideColor")]
+        public Color pWaveContractionColor
+        {
+            get
+            {
+                return this.ppWaveContractionColor;
+            }
+            set
+            {
+                this.ppWaveContractionColor = value;
+            }
+        }
+
+        [Browsable(false)]
+        public string pWaveContractionColorSerialize
+        {
+            get
+            {
+                return SerializableColor.ToString(this.ppWaveContractionColor);
+            }
+            set
+            {
+                this.ppWaveContractionColor = SerializableColor.FromString(value);
+            }
+        }
+
+        [Category("Display"), NinjaTrader.Gui.Design.DisplayName("c1_InsideColor"), Description("InsideColor")]
+        public Color pWaveExpansionColor
+        {
+            get
+            {
+                return this.ppWaveExpansionColor;
+            }
+            set
+            {
+                this.ppWaveExpansionColor = value;
+            }
+        }
+
+        [Browsable(false)]
+        public string pWaveExpansionColorSerialize
+        {
+            get
+            {
+                return SerializableColor.ToString(this.ppWaveExpansionColor);
+            }
+            set
+            {
+                this.ppWaveExpansionColor = SerializableColor.FromString(value);
+            }
+        }
+
+        [XmlIgnore, Browsable(false)]
+        public DataSeries Wave1
+        {
+            get
+            {
+                return base.Values[0];
+            }
+        }
+
+        [XmlIgnore, Browsable(false)]
+        public DataSeries Wave2
+        {
+            get
+            {
+                return base.Values[1];
+            }
+        }
+		
+		//Added Sim22
+		[Description("Use gapless method. Ignores gaps between close[1] and open[0]. Best used for new session intraday open.")]
+        [GridCategory("Parameters")]
+        public bool UseGapless
+        {
+            get { return useGapless; }
+            set { useGapless = value; }
+        }
+		
+		[NinjaTrader.Gui.Design.DisplayName("Sponsor"), GridCategory("Parameters"), Description("www.ewef.net")]
+        public bool ShowSponsor
+        {
+            get
+            {
+                return this.showSponsor;
+            }
+            set
+            {
+                this.showSponsor = value;
+            }
+		}
+    }
+}
+

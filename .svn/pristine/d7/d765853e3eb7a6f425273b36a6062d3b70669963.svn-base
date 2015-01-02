@@ -1,0 +1,99 @@
+#region Using declarations
+using System;
+using System.ComponentModel;
+using System.Drawing;
+using NinjaTrader.Cbi;
+using NinjaTrader.Data;
+using NinjaTrader.Indicator;
+using NinjaTrader.Strategy;
+#endregion
+
+// This namespace holds all strategies and is required. Do not change it.
+namespace NinjaTrader.Strategy
+{
+    /// <summary>
+    /// This file holds all user defined strategy methods.
+    /// </summary>
+    partial class Strategy
+    {
+        public bool AODifferentColor(int barsAgo)
+        {
+            int negCol = 0;
+            int posCol = 0;
+            for (int i = 1; i <= barsAgo; i++)
+            {
+                if (bwAO().AOValue[i] < 0)
+                {
+                    negCol++;
+                }
+                else if (bwAO().AOValue[i] > 0)
+                {
+                    posCol++;
+                }
+            }
+            if ((negCol != 0) && (posCol != 0))
+            {
+                return true;
+            }
+            return false;
+        }
+
+        public bool RagheeDifferentColor(int barsAgo)
+        {
+            int negCol = 0;
+            int posCol = 0;
+            for (int i = 1; i <= barsAgo; i++)
+            {
+                if ((Open[i] <= Close[i]
+                && Close[i] > EMA(High, 34)[i]) ||
+                    (Open[i] >= Close[i]
+                && Close[i] > EMA(High, 34)[i]))
+                {
+                    posCol++;
+                }
+
+                else if ((Open[i] <= Close[i]
+                && Close[i] < EMA(Low, 34)[i]) ||
+                    (Open[i] >= Close[i]
+                && Close[i] < EMA(Low, 34)[i]))
+                {
+                    negCol++;
+                }
+
+            }
+            if ((negCol != 0) && (posCol != 0))
+            {
+                return true;
+            }
+            return false;
+        }
+        public double GetHighest(int numOfBars)
+        {
+            double curHigh;
+            double mostHigh = High[0];
+            for (int i = 1; i <= numOfBars; i++)
+            {
+                curHigh = High[i];
+                if (curHigh > mostHigh)
+                {
+                    mostHigh = curHigh;
+                }
+            }
+            return mostHigh;
+        }
+        public double GetLowest(int numOfBars)
+        {
+            double curLow;
+            double mostLow = Low[0];
+            for (int i = 1; i <= numOfBars; i++)
+            {
+                curLow = Low[i];
+                if (curLow < mostLow)
+                {
+                    mostLow = curLow;
+                }
+            }
+            return mostLow;
+        }
+    }
+}
