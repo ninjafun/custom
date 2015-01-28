@@ -1,4 +1,7 @@
+using System.Threading;
+
 #region Using declarations
+
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -63,6 +66,12 @@ namespace NinjaTrader.Strategy
         {
             if (firstTime)
             {
+                //IOrder entryOrder = SubmitOrder(0, OrderAction.Buy, OrderType.Limit, 10000, 1.01, 0, "", "Long Limit");
+                IOrder entryOrder = SubmitOrder(0, OrderAction.Buy, OrderType.Market, 10000, 0, 0, "", "Long Limit");
+                while (entryOrder.OrderState != NinjaTrader.Cbi.OrderState.Filled)
+                {
+                    Thread.Sleep(TimeSpan.FromSeconds(1));
+                }
                 totalQuantity = GetAccountQuantity(curAcctName);
                 switch (numberOfExits)
                 {
@@ -90,17 +99,20 @@ namespace NinjaTrader.Strategy
             //    Log("first tick of the bar now" + counter++, LogLevel.Warning);
             //}
             // Condition set 1
-            if (SMA(50)[0] == Close[0])
-            {
-                EnterLong(DefaultQuantity, "longa");
-            }
+            //if (SMA(50)[0] == Close[0])
+            //{
+            //    EnterLong(DefaultQuantity, "longa");
+            //}
         }
         private int GetAccountQuantity(string accountName)
         {
             foreach (Account acct in Cbi.Globals.Accounts)
             {
                 Log("acct.Name=" + acct.Name + ", curAcctName=" + curAcctName, LogLevel.Error);
-                if (acct.Name != curAcctName) continue;
+                if (acct.Name != accountName) continue;
+                var x = acct.GetAccountValue(AccountItem.CashValue, Currency.UsDollar);
+                var x2 = acct.GetAccountValue(AccountItem.TotalCashBalance, Currency.UsDollar);
+                var x3 = acct.GetAccountValue(AccountItem.BuyingPower, Currency.UsDollar);
                 if (acct.Positions != null)
                 {
                     PositionCollection positions = acct.Positions;

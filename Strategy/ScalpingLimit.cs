@@ -1,4 +1,9 @@
+using System.Collections.Generic;
+using System.IO;
+using System.Windows.Forms;
+
 #region Using declarations
+
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -10,7 +15,7 @@ using NinjaTrader.Data;
 using NinjaTrader.Indicator;
 using NinjaTrader.Gui.Chart;
 using NinjaTrader.Strategy;
-using OfficeOpenXml;
+//using OfficeOpenXml;
 
 #endregion
 
@@ -24,13 +29,13 @@ namespace NinjaTrader.Strategy
     public class ScalpingLimit : Strategy
     {
         #region Variables
-        private bool backtest = true;  // Set true for backtesting
-        private static double prevStop, curStop, curTarget;
-        private double lFractal, hFractal;
-        private int position = 0;
-        private int cPositionDirection = 0;
-        string curAcctName;
-        string curInstrument;
+        private bool _backtest = true;  // Set true for backtesting
+        private static double _prevStop, _curStop, _curTarget;
+        private double _lFractal, _hFractal;
+        MarketPosition _marketPosition = MarketPosition.Flat;
+        private int _positionQuantity = 0;
+        private double _unrealizedPNL = 0;
+      
         int target1 = 30;
         int stop1 = 10;
         private double myTickSize = 0;
@@ -40,6 +45,10 @@ namespace NinjaTrader.Strategy
         double highest0;
         double highest1;
         int stopNumOfBars = 20;
+        List<IOrder> _managedOrderList = new List<IOrder>();
+        List<Order> _unmanagedOrderList = new List<Order>();
+        private ConnectionStatus _orderConnectionStatus = ConnectionStatus.Disconnected;
+        private ConnectionStatus _priceConnectionStatus = ConnectionStatus.Disconnected;
         #endregion
 
         /// <summary>
@@ -47,26 +56,66 @@ namespace NinjaTrader.Strategy
         /// </summary>
         protected override void Initialize()
         {
+
+
             CalculateOnBarClose = true;
             BarsRequired = 70;
             ExitOnClose = true;
-            EntriesPerDirection = 100000;
-
+            EntriesPerDirection = 10000;
+            Print("test");
             //Unmanaged = true;
-            //curAcctName = Account.Name;
-            //curInstrument = Instrument.FullName;
-            //RealtimeErrorHandling = NinjaTrader.Strategy.RealtimeErrorHandling.TakeNoAction;
-            Add(bwAO());
-            Add(mahTrendGRaBerV1(34, 34, 34, 2));
-            Add(SMA(51));
+            
+            RealtimeErrorHandling = NinjaTrader.Strategy.RealtimeErrorHandling.TakeNoAction;
+
+            //Add(bwAO());
+            //Add(mahTrendGRaBerV1(34, 34, 34, 2));
+            //Add(SMA(51));
             //Add(FractalLevel(1));
             //TraceOrders = true;
-			ExcelPackage pck;
-			pck = new ExcelPackage();
+            //ExcelPackage pck;
+            //pck = new ExcelPackage();
 
         }
+
+        protected override void OnStartUp()
+        {
+            NtGetPositionTest(Account, Instrument);
+            Log("test2", LogLevel.Error);
+            //FileInfo newFile = new FileInfo(@"F:\Users\Vadim\Documents\Unified Functional Testing\ForexFactory1\Output\ForexFactoryInCentralTime.xlsx");
+            //using (ExcelPackage pck = new ExcelPackage(newFile))
+            //{
+            //    ExcelWorksheet ws = pck.Workbook.Worksheets["Events"];
+
+            //    //                ws.Cells["A1"].LoadFromDataTable(dataTable, true);
+                
+            //}
+        }
+
+        protected override void OnConnectionStatus(ConnectionStatus orderStatus, ConnectionStatus priceStatus)
+        {
+            _orderConnectionStatus = orderStatus;
+            _priceConnectionStatus = priceStatus;
+            if (_orderConnectionStatus != ConnectionStatus.Connected || _priceConnectionStatus != ConnectionStatus.Connected)
+            {
+                return;
+            }
+            _unmanagedOrderList.Clear();
+            NtPopulateManualOrders(Account, Instrument, ref _unmanagedOrderList);
+            _marketPosition = NtGetPositionDirection(Account, Instrument);
+            if (_marketPosition != MarketPosition.Flat)
+            {
+                _positionQuantity = NtGetUnrealizedQuantity(Account, Instrument);
+                _unrealizedPNL = NtGetUnrealizedNotional(Account, Instrument);
+            }
+            else
+            {
+                _positionQuantity = 0;
+            }
+        }
+
         protected override void OnPositionUpdate(IPosition position)
         {
+           // MessageBox.Show("Hello4");
             Print("Position is " + position.MarketPosition);
         }
 
@@ -76,11 +125,36 @@ namespace NinjaTrader.Strategy
         /// </summary>
         protected override void OnBarUpdate()
         {
-            if (backtest == false)
+            if (Historical)
+                return;
+            NtGetPositionTest(Account, Instrument);
+            return;
+          //  MessageBox.Show("Hello3");
+            Cbi.Position myPosition = Account.Positions.FindByInstrument(Instrument);
+            int iOrderCount = Account.Orders.Count; Print("Total Open Orders: " + iOrderCount); 
+            System.Collections.IEnumerator ListOrders = Account.Orders.GetEnumerator();
+            for (int i = 0; i < iOrderCount; i++)
+            {
+                ListOrders.MoveNext(); 
+                Print(" Open Orders: " + ListOrders.Current);
+                Order myOrder = ListOrders.Current as NinjaTrader.Cbi.Order;
+                if (myOrder.OrderState == OrderState.Working)
+                    myOrder.Cancel();
+            }
+
+
+            Log("test3", LogLevel.Error);
+            if (_backtest == false)
             {
                 if (Historical)
                     return;
             }
+            Print(Position.MarketPosition.ToString() + " " + Position.Quantity.ToString());
+            double pl = Position.GetProfitLoss(Close[0], PerformanceUnit.Currency);
+
+ 
+
+
             if (Position.MarketPosition == MarketPosition.Flat)
             {
                 if (ToTime(Time[0]) >= 20000 && ToTime(Time[0]) <= 80000)
@@ -108,18 +182,18 @@ namespace NinjaTrader.Strategy
                         && (lowest1 > EMA(High, 34)[1])
                         && (lowest1 > SMA(51)[1]))
                     {
-                        if (RagheeDifferentColor(8))
+                        if (NtRagheeDifferentColor(8))
                         {
-                            lFractal = GetLowestFractal(stopNumOfBars, 4);
-                            prevStop = curStop = lFractal;
+                            _lFractal = NtGetLowestFractal(stopNumOfBars, 4);
+                            _prevStop = _curStop = _lFractal;
                             //SetStopLoss("target1", CalculationMode.Price, curStop, false);
 
-                            curTarget = Close[0] + (target1 * myTickSize);
+                            _curTarget = Close[0] + (target1 * myTickSize);
                             //prevStop = curStop = Close[0] - (stop1 * myTickSize);
-                            SetProfitTarget("target1", CalculationMode.Price, curTarget);
-                            SetStopLoss("target1", CalculationMode.Price, curStop, false);
+                            SetProfitTarget("target1", CalculationMode.Price, _curTarget);
+                            SetStopLoss("target1", CalculationMode.Price, _curStop, false);
                             EnterLong(NumOfContracts, "target1");
-                            PrintWithTimeStamp("Long; stop = " + curStop.ToString() + "; target = " + curTarget.ToString());
+                            PrintWithTimeStamp("Long; stop = " + _curStop.ToString() + "; target = " + _curTarget.ToString());
                         }
                     }
 
@@ -133,18 +207,18 @@ namespace NinjaTrader.Strategy
                         && (highest1 < EMA(Low, 34)[1])
                         && (highest1 < SMA(51)[1]))
                     {
-                        if (RagheeDifferentColor(8))
+                        if (NtRagheeDifferentColor(8))
                         {
-                            hFractal = GetHighestFractal(stopNumOfBars, 4);
-                            prevStop = curStop = hFractal;
+                            _hFractal = NtGetHighestFractal(stopNumOfBars, 4);
+                            _prevStop = _curStop = _hFractal;
                             //SetStopLoss("target1", CalculationMode.Price, curStop, false);
 
-                            curTarget = Close[0] - (target1 * myTickSize);
+                            _curTarget = Close[0] - (target1 * myTickSize);
                             //prevStop = curStop = Close[0] + (stop1 * myTickSize);
-                            SetProfitTarget("target1", CalculationMode.Price, curTarget);
-                            SetStopLoss("target1", CalculationMode.Price, curStop, false);
+                            SetProfitTarget("target1", CalculationMode.Price, _curTarget);
+                            SetStopLoss("target1", CalculationMode.Price, _curStop, false);
                             EnterShort(NumOfContracts, "target1");
-                            PrintWithTimeStamp("Short; stop = " + curStop.ToString() + "; target = " + curTarget.ToString());
+                            PrintWithTimeStamp("Short; stop = " + _curStop.ToString() + "; target = " + _curTarget.ToString());
                         }
                     }
                 }
@@ -153,11 +227,11 @@ namespace NinjaTrader.Strategy
             #endregion
             else if (Position.MarketPosition == MarketPosition.Long)
             {
-                lFractal = GetLowestFractal(stopNumOfBars, 4);
-                if (lFractal > curStop)
+                _lFractal = NtGetLowestFractal(stopNumOfBars, 4);
+                if (_lFractal > _curStop)
                 {
-                    curStop = lFractal;
-                    SetStopLoss("target1", CalculationMode.Price, curStop, false);
+                    _curStop = _lFractal;
+                    SetStopLoss("target1", CalculationMode.Price, _curStop, false);
                 }
                 //if (Close[0] < curStop)
                 //{
@@ -166,11 +240,11 @@ namespace NinjaTrader.Strategy
             }
             else if (Position.MarketPosition == MarketPosition.Short)
             {
-                hFractal = GetHighestFractal(stopNumOfBars, 4);
-                if (hFractal < curStop)
+                _hFractal = NtGetHighestFractal(stopNumOfBars, 4);
+                if (_hFractal < _curStop)
                 {
-                    curStop = hFractal;
-                    SetStopLoss("target1", CalculationMode.Price, curStop, false);
+                    _curStop = _hFractal;
+                    SetStopLoss("target1", CalculationMode.Price, _curStop, false);
                 }
                 //if (Close[0] > curStop)
                 //{
@@ -181,9 +255,9 @@ namespace NinjaTrader.Strategy
 
 
 
-        private double GetLowestFractal(int numOfBars, int numOfFractal)
+        private double NtGetLowestFractal(int numOfBars, int numOfFractal)
         {
-            return GetLowest(numOfBars);
+            return NtGetLowest(numOfBars);
 
             int fractalChanges = 0;
             double curFractalPrice = 0;
@@ -206,9 +280,9 @@ namespace NinjaTrader.Strategy
             }
             return lowestFractalPrice;
         }
-        private double GetHighestFractal(int numOfBars, int numOfFractal)
+        private double NtGetHighestFractal(int numOfBars, int numOfFractal)
         {
-            return GetHighest(numOfBars);
+            return NtGetHighest(numOfBars);
             int fractalChanges = 0;
             double curFractalPrice = 0;
             double HighestFractalPrice = FractalLevel(1).UpFractals[3];
@@ -300,8 +374,8 @@ namespace NinjaTrader.Strategy
         [GridCategory("Parameters")]
         public bool BackTest
         {
-            get { return backtest; }
-            set { backtest = value; }
+            get { return _backtest; }
+            set { _backtest = value; }
         }
 
         [Description("")]

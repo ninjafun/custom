@@ -1,4 +1,7 @@
+using System.Threading;
+
 #region Using declarations
+
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
@@ -46,10 +49,11 @@ namespace NinjaTrader.Strategy
         /// </summary>
         protected override void Initialize()
         {
+            Log("Hello World",LogLevel.Warning);
             CalculateOnBarClose = true;
             BarsRequired = 70;
             ExitOnClose = true;
-            EntriesPerDirection = 100000;
+            EntriesPerDirection = 10000;
             
             //Unmanaged = true;
             //curAcctName = Account.Name;
@@ -64,12 +68,19 @@ namespace NinjaTrader.Strategy
             Add(TTMWaveBOC(false));
             Add(TTMWaveCOC(false));
 
-
+           
 
             //Add(FractalLevel(1));
             //TraceOrders = true;
 
         }
+
+        protected override void OnStartUp()
+        {
+            
+        }
+
+
 		protected override void OnPositionUpdate(IPosition position)
 		{ 
 			Print("Position is " + position.MarketPosition );
@@ -81,11 +92,15 @@ namespace NinjaTrader.Strategy
         /// </summary>
         protected override void OnBarUpdate()
         {
+
             if (backtest == false)
             {
                 if (Historical)
                     return;
             }
+            //IOrder ord = EnterLongLimit(10000, 1.01);
+            //CancelOrder(ord);
+            var j = NtGetAccountQuantity("33220525");
             if (Position.MarketPosition == MarketPosition.Flat)
             {
                 if (ToTime(Time[0]) >= 10000 && ToTime(Time[0]) <= 110000)
@@ -105,7 +120,7 @@ namespace NinjaTrader.Strategy
                 //look to enter long or short position
 
                 if ((bwAO().AOValue[0] > 0)
-                    && (IsWaveCrossed(true,false,"A",6)==1)
+                    && (NtIsWaveCrossed(true,false,"A",6)==1)
 //                    &&  (TTMWaveAOC(false).Wave1[0]>0)
 //                    && (TTMWaveAOC(false).Wave2[0] > 0)
 //                    && (TTMWaveBOC(false).Wave1[0] > 0)
@@ -119,7 +134,7 @@ namespace NinjaTrader.Strategy
                         && (lowest1 > EMA(High, 34)[1])
                         && (lowest1 > SMA(51)[1]))
                     {
-                        if (RagheeDifferentColor(8))
+                        if (NtRagheeDifferentColor(8))
                         {
                             lFractal = GetLowestFractal(stopNumOfBars, 4);
                             prevStop = curStop = lFractal;
@@ -136,7 +151,7 @@ namespace NinjaTrader.Strategy
                         
                 }
                 else if ((bwAO().AOValue[0] < 0)
-                    && (IsWaveCrossed(false, false, "A", 6) == -1)
+                    && (NtIsWaveCrossed(false, false, "A", 6) == -1)
 //                    && (TTMWaveAOC(false).Wave1[0] < 0)
 //                    && (TTMWaveAOC(false).Wave2[0] < 0)
 //                    && (TTMWaveBOC(false).Wave1[0] < 0)
@@ -150,7 +165,7 @@ namespace NinjaTrader.Strategy
                         && (highest1 < EMA(Low, 34)[1])
                         && (highest1 < SMA(51)[1]))
                     {
-                        if (RagheeDifferentColor(8))
+                        if (NtRagheeDifferentColor(8))
                         {
                             hFractal = GetHighestFractal(stopNumOfBars, 4);
                             prevStop = curStop = hFractal;
@@ -200,7 +215,7 @@ namespace NinjaTrader.Strategy
 
         private double GetLowestFractal(int numOfBars, int numOfFractal)
         {
-            return GetLowest(numOfBars);
+            return NtGetLowest(numOfBars);
 
             int fractalChanges = 0;
             double curFractalPrice = 0;
@@ -225,7 +240,7 @@ namespace NinjaTrader.Strategy
         }
         private double GetHighestFractal(int numOfBars, int numOfFractal)
         {
-            return GetHighest(numOfBars);
+            return NtGetHighest(numOfBars);
             int fractalChanges = 0;
             double curFractalPrice = 0;
             double HighestFractalPrice = FractalLevel(1).UpFractals[3];

@@ -79,13 +79,13 @@ namespace NinjaTrader.Strategy
             //Check Direction to look entry to
 
             //Check 200 SMA risign/falling/flat
-            trend = trend + SeriesTrend(SMA(200), 10);
+            trend = trend + NtSeriesTrend(SMA(200), 10);
             numOfTrendConditions++;
 
             //Check Raghe Horner indicator
 
             //Check TTM C Wave both waves
-            //if (GetWaveBLong(0)>)
+            //if (NtGetWaveBLong(0)>)
 
             if (Math.Abs(numOfTrendConditions) == Math.Abs(trend))
             {

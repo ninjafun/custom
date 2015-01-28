@@ -4892,7 +4892,7 @@
             <summary>
             </summary>
         </member>
-        <member name="M:NinjaTrader.Strategy.Strategy.SeriesTrend(NinjaTrader.Data.IDataSeries,System.Int32)">
+        <member name="M:NinjaTrader.Strategy.Strategy.NtSeriesTrend(NinjaTrader.Data.IDataSeries,System.Int32)">
             <summary>
             Series Trend
             </summary>
@@ -4900,7 +4900,7 @@
             <param name="numOfBars"> number of bars </param>
             <returns>1 - rising, -1 falling, 0 flat or unknown</returns>
         </member>
-        <member name="M:NinjaTrader.Strategy.Strategy.IsWaveCrossed(System.Boolean,System.Boolean,System.String,System.Int32)">
+        <member name="M:NinjaTrader.Strategy.Strategy.NtIsWaveCrossed(System.Boolean,System.Boolean,System.String,System.Int32)">
             <summary>
             Return whether the wave crossed
             </summary>

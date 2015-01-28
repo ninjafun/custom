@@ -111,9 +111,6 @@
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="EPPlus">
-      <HintPath>..\..\..\Visual Studio 2012\Projects\ForexFactory\Third Party Libs\EPPlus\EPPlus.dll</HintPath>
-    </Reference>
     <Reference Include="NinjaTrader.Core">
       <HintPath>C:\Program Files (x86)\NinjaTrader 7\bin\NinjaTrader.Core.dll</HintPath>
     </Reference>
