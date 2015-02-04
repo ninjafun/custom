@@ -10522,6 +10522,21 @@
             Called on each bar update event (incoming tick)
             </summary>
         </member>
+        <member name="T:NinjaTrader.Strategy.SemiAutomated1">
+            <summary>
+            User will enter orders. Strategy will pick it up and will send its own orders.
+            </summary>
+        </member>
+        <member name="M:NinjaTrader.Strategy.SemiAutomated1.Initialize">
+            <summary>
+            This method is used to configure the strategy and is called once before any strategy method is called.
+            </summary>
+        </member>
+        <member name="M:NinjaTrader.Strategy.SemiAutomated1.OnBarUpdate">
+            <summary>
+            Called on each bar update event (incoming tick)
+            </summary>
+        </member>
         <member name="T:NinjaTrader.Strategy.str3targerts">
             <summary>
             Enter the description of your strategy here

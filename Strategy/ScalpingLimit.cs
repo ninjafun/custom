@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Collections.ObjectModel;
 using System.IO;
+using System.Threading;
 using System.Windows.Forms;
 
 #region Using declarations
@@ -45,8 +47,10 @@ namespace NinjaTrader.Strategy
         double highest0;
         double highest1;
         int stopNumOfBars = 20;
+        
         List<IOrder> _managedOrderList = new List<IOrder>();
         List<Order> _unmanagedOrderList = new List<Order>();
+        ObservableCollection<Order> _unmanagedOrderCollection = new ObservableCollection<Order>(); 
         private ConnectionStatus _orderConnectionStatus = ConnectionStatus.Disconnected;
         private ConnectionStatus _priceConnectionStatus = ConnectionStatus.Disconnected;
         #endregion
@@ -60,12 +64,14 @@ namespace NinjaTrader.Strategy
 
             CalculateOnBarClose = true;
             BarsRequired = 70;
-            ExitOnClose = true;
-            EntriesPerDirection = 10000;
-            Print("test");
-            //Unmanaged = true;
+            ExitOnClose = false;
+            //EntriesPerDirection = 10000;
+            //Print("test");
+            Unmanaged = true;
             
             RealtimeErrorHandling = NinjaTrader.Strategy.RealtimeErrorHandling.TakeNoAction;
+
+            SyncAccountPosition = false;
 
             //Add(bwAO());
             //Add(mahTrendGRaBerV1(34, 34, 34, 2));
@@ -79,8 +85,8 @@ namespace NinjaTrader.Strategy
 
         protected override void OnStartUp()
         {
-            NtGetPositionTest(Account, Instrument);
-            Log("test2", LogLevel.Error);
+            //NtGetPositionTest(Account, Instrument);
+            //Log("test2", LogLevel.Error);
             //FileInfo newFile = new FileInfo(@"F:\Users\Vadim\Documents\Unified Functional Testing\ForexFactory1\Output\ForexFactoryInCentralTime.xlsx");
             //using (ExcelPackage pck = new ExcelPackage(newFile))
             //{
@@ -110,13 +116,36 @@ namespace NinjaTrader.Strategy
             else
             {
                 _positionQuantity = 0;
+                _unrealizedPNL = 0;
             }
+            for (int i = 0; i < _unmanagedOrderList.Count; i++)
+            {   
+                //_managedOrderList.Add(_unmanagedOrderList[i] as IOrder);
+                _unmanagedOrderCollection.Add(_unmanagedOrderList[i]);
+            }
+            _unmanagedOrderCollection.CollectionChanged += new System.Collections.Specialized.NotifyCollectionChangedEventHandler(order_CollectionChanged);
         }
+
+        
 
         protected override void OnPositionUpdate(IPosition position)
         {
            // MessageBox.Show("Hello4");
             Print("Position is " + position.MarketPosition);
+        }
+
+        private void order_CollectionChanged(object sender,
+            System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        {
+            foreach (var item in e.NewItems)
+            {
+                Order x = item as Order;
+            }
+            foreach (var item in e.OldItems)
+            {
+                Order x = item as Order;
+            }
+            Thread.Sleep(50);
         }
 
 
@@ -127,6 +156,18 @@ namespace NinjaTrader.Strategy
         {
             if (Historical)
                 return;
+            foreach (Order order in _unmanagedOrderCollection)
+            {
+                Log(order.OrderState.ToString(), LogLevel.Information);
+                order.Cancel();
+                break;
+            }
+            Thread.Sleep(50);
+            //foreach (IOrder iOrder in _managedOrderList)
+            //{
+            //    Log(iOrder.OrderState.ToString(), LogLevel.Information);
+            //}
+
             NtGetPositionTest(Account, Instrument);
             return;
           //  MessageBox.Show("Hello3");

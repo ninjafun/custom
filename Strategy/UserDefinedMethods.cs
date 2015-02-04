@@ -17,6 +17,31 @@ using NinjaTrader.Strategy;
 
 namespace NinjaTrader.Strategy
 {
+    public class OrderWrapper : Order, INotifyPropertyChanged
+    {
+        private OrderState _orderState;
+
+        OrderWrapper()
+        {
+            _orderState = base.OrderState;
+        }
+
+        public OrderState OrderState
+        {
+            get
+            {
+                if (_orderState != base.OrderState)
+                {
+                    _orderState = base.OrderState;
+                    PropertyChanged(this, new PropertyChangedEventArgs("OrderState"));
+                }
+                return _orderState;
+            }
+        }
+        public event PropertyChangedEventHandler PropertyChanged;
+
+    }
+
     /// <summary>
     /// This file holds all user defined strategy methods.
     /// </summary>
@@ -254,6 +279,7 @@ namespace NinjaTrader.Strategy
             var x1 = NtGetUnrealizedNotional(account, instrument);
             var x2 = NtGetAvgPrice(account, instrument);
             var x3 = NtGetPositionDirection(account, instrument);
+            var x4 = NtGetUnrealizedPips(account, instrument);
             return 0;
         }
 
@@ -274,6 +300,32 @@ namespace NinjaTrader.Strategy
                 return 0;
             }
             return myPosition.Quantity;
+        }
+        public double NtGetUnrealizedPips(Account account, Instrument instrument)
+        {
+            Position myPosition = account.Positions.FindByInstrument(instrument);
+            if (myPosition == null)
+            {
+                return 0;
+            }
+            else if (myPosition.MarketPosition == MarketPosition.Long)
+            {
+                return myPosition.GetProfitLoss(GetCurrentBid(),PerformanceUnit.Points);
+            }
+            else
+            {
+                return myPosition.GetProfitLoss(GetCurrentAsk(), PerformanceUnit.Points);
+            }
+        }
+
+        public void NtClosePosition(Account account, Instrument instrument)
+        {
+            Position myPosition = account.Positions.FindByInstrument(instrument);
+            if (myPosition == null)
+            {
+                return;
+            }
+            myPosition.Close();
         }
 
         private double NtGetAvgPrice(Account account, Instrument instrument)

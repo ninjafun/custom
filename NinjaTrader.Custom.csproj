@@ -135,6 +135,7 @@
     <Reference Include="WilsonORMapper">
       <HintPath>C:\Program Files (x86)\NinjaTrader 7\bin\WilsonORMapper.DLL</HintPath>
     </Reference>
+    <Reference Include="WindowsBase" />
   </ItemGroup>
   <ItemGroup>
     <Compile Include="AssemblyInfo.cs">
@@ -445,6 +446,7 @@
     <Compile Include="Strategy\RValStrategy3.cs" />
     <Compile Include="Strategy\Scalping1.cs" />
     <Compile Include="Strategy\ScalpingLimit.cs" />
+    <Compile Include="Strategy\SemiAutomated1.cs" />
     <Compile Include="Strategy\str3targerts.cs" />
     <Compile Include="Strategy\strKeltner.cs" />
     <Compile Include="Strategy\TTM1.cs" />
