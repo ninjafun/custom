@@ -168,8 +168,7 @@ namespace NinjaTrader.Strategy
             //    Log(iOrder.OrderState.ToString(), LogLevel.Information);
             //}
 
-            NtGetPositionTest(Account, Instrument);
-            return;
+
           //  MessageBox.Show("Hello3");
             Cbi.Position myPosition = Account.Positions.FindByInstrument(Instrument);
             int iOrderCount = Account.Orders.Count; Print("Total Open Orders: " + iOrderCount); 

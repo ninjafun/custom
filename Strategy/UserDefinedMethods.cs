@@ -107,17 +107,22 @@ namespace NinjaTrader.Strategy
 
         public double NtGetHighest(int numOfBars)
         {
-            double curHigh;
-            double mostHigh = High[0];
-            for (int i = 1; i <= numOfBars; i++)
-            {
-                curHigh = High[i];
-                if (curHigh > mostHigh)
-                {
-                    mostHigh = curHigh;
-                }
-            }
-            return mostHigh;
+            return BarsArray[0][BarsArray[0].HighestBar(numOfBars)];
+            //double curHigh;
+            //double mostHigh = High[0];
+            //for (int i = 1; i <= numOfBars; i++)
+            //{
+            //    curHigh = High[i];
+            //    if (curHigh > mostHigh)
+            //    {
+            //        mostHigh = curHigh;
+            //    }
+            //}
+            //return mostHigh;
+        }
+        public double NtGetHighest(int dsIndex, int numOfBars)
+        {
+            return BarsArray[dsIndex][BarsArray[dsIndex].HighestBar(numOfBars)];
         }
 
         public double NtGetLowest(int numOfBars)
@@ -238,7 +243,7 @@ namespace NinjaTrader.Strategy
         public double NtGetWaveALong(int barsAgo)
         {
             double rVal = 0.0;
-            rVal = TTMWaveAOC(false).Wave2[barsAgo];
+            rVal = TTMWaveAOC(BarsArray[0],false).Wave2[barsAgo];
             return rVal;
         }
 
@@ -328,7 +333,7 @@ namespace NinjaTrader.Strategy
             myPosition.Close();
         }
 
-        private double NtGetAvgPrice(Account account, Instrument instrument)
+        public double NtGetAvgPrice(Account account, Instrument instrument)
         {
             Position myPosition = account.Positions.FindByInstrument(instrument);
             if (myPosition == null)
@@ -337,7 +342,15 @@ namespace NinjaTrader.Strategy
             }
             return myPosition.AvgPrice;
         }
-
+        public int NtGetPositionQty(Account account, Instrument instrument)
+        {
+            Position myPosition = account.Positions.FindByInstrument(instrument);
+            if (myPosition == null)
+            {
+                return 0;
+            }
+            return myPosition.Quantity;
+        }
         public MarketPosition NtGetPositionDirection(Account account, Instrument instrument)
         {
             Position myPosition = account.Positions.FindByInstrument(instrument);
@@ -390,12 +403,12 @@ namespace NinjaTrader.Strategy
 
         public int NtGetAccountQuantity(string accountName)
         {
-            IOrder ord = EnterLong(10000, "testorder");
-            while (ord.OrderState == OrderState.Working)
-            {
-                Thread.Sleep(2000);
-                Log("Working", LogLevel.Warning);
-            }
+            //IOrder ord = EnterLong(10000, "testorder");
+            //while (ord.OrderState == OrderState.Working)
+            //{
+            //    Thread.Sleep(2000);
+            //    Log("Working", LogLevel.Warning);
+            //}
             foreach (Account acct in Cbi.Globals.Accounts)
             {
                 Log("acct.Name=" + acct.Name + ", curAcctName=" + accountName, LogLevel.Error);

@@ -446,6 +446,7 @@
     <Compile Include="Strategy\RValStrategy3.cs" />
     <Compile Include="Strategy\Scalping1.cs" />
     <Compile Include="Strategy\ScalpingLimit.cs" />
+    <Compile Include="Strategy\ScalpingMultiTimeFrame1.cs" />
     <Compile Include="Strategy\SemiAutomated1.cs" />
     <Compile Include="Strategy\str3targerts.cs" />
     <Compile Include="Strategy\strKeltner.cs" />
