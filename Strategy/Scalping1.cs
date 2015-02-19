@@ -49,7 +49,7 @@ namespace NinjaTrader.Strategy
         /// </summary>
         protected override void Initialize()
         {
-            Log("Hello World",LogLevel.Warning);
+            //Log("Hello World",LogLevel.Warning);
             CalculateOnBarClose = true;
             BarsRequired = 70;
             ExitOnClose = true;

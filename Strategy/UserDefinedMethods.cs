@@ -297,6 +297,19 @@ namespace NinjaTrader.Strategy
             }
             return myPosition.GetProfitLoss(Close[0], PerformanceUnit.Currency);
         }
+
+        public double NtGetTotalNetNotional(Account account, Instrument instrument)
+        {
+            Position myPosition = account.Positions.FindByInstrument(instrument);
+            if (myPosition == null)
+            {
+                return 0;
+            }
+            double realizedPnl = GetAccountValue(AccountItem.RealizedProfitLoss);
+            double retVal = realizedPnl + myPosition.GetProfitLoss(Close[0], PerformanceUnit.Currency);
+            return retVal;
+        }
+
         public int NtGetUnrealizedQuantity(Account account, Instrument instrument)
         {
             Position myPosition = account.Positions.FindByInstrument(instrument);

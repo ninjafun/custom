@@ -36,13 +36,14 @@ namespace NinjaTrader.Custom.Strategy
         private static bool _longEntry = true; // Default setting for LongEntry
         private static bool _shortEntry = true; // Default setting for ShortEntry
         private static double _maxTradeLoss = 500.000; // Default setting for MaxTradeLoss
-        private static double _maxDailyLoss = 1000.000; // Default setting for MaxDailyLoss
+        private static double _maxDailyLoss = 1; // Default setting for MaxDailyLoss
         private static double _maxTradeWin = 1000; // Default setting for MaxTradeWin
         private static ConnectionStatus _orderConnectionStatus;
         private static ConnectionStatus _priceConnectionStatus;
         private static MarketPosition _marketPosition;
         private static int _totalPositionQuantity;
         private double _unrealizedPnl;
+        private double _totalNetPnl;
         private static int _managedPositionQuantity;
         private static int _unmanagedPositionQuantity;
         private DataSeries _MyHeikenAshiSeries;
@@ -72,6 +73,8 @@ namespace NinjaTrader.Custom.Strategy
         protected override void Initialize()
         {
             ClearOutputWindow();
+            PrintWithTimeStamp("test0");
+            Print("test1");
             CalculateOnBarClose = true;
             BarsRequired = 70;
             ExitOnClose = false;
@@ -80,7 +83,9 @@ namespace NinjaTrader.Custom.Strategy
             SyncAccountPosition = false;
             _totalPositionQuantity = 0;
             _unrealizedPnl = 0;
-            AddRenko(Instrument.FullName, 50, MarketDataType.Last);
+            
+            IgnoreOverFill = true;
+            AddRenko(Instrument.FullName, 2, MarketDataType.Last);
             //myDataSeries = new DataSeries(this, MaximumBarsLookBack.TwoHundredFiftySix);
             //Add(PeriodType.Tick, 10);
             
@@ -138,6 +143,21 @@ namespace NinjaTrader.Custom.Strategy
         //    Log("myOnOrderTrace", LogLevel.Warning);
         //}
 
+        bool ETradeCtrMaxDailyLoss()
+        {
+            _totalNetPnl = NtGetTotalNetNotional(Account, Instrument);
+
+
+            if ((_totalNetPnl < 0) && Math.Abs(_totalNetPnl) > _maxDailyLoss)
+            {
+                NtClosePosition(Account, Instrument);
+                Log("Disabling Strategy because Max Loss reached", LogLevel.Error);
+                Disable();
+                return true;
+            }
+            return false;
+        }
+
         protected override void OnConnectionStatus(ConnectionStatus orderStatus, ConnectionStatus priceStatus)
         {
             _orderConnectionStatus = orderStatus;
@@ -149,8 +169,12 @@ namespace NinjaTrader.Custom.Strategy
             ResetValues();
             _managedOrderList.Clear();
             _unmanagedOrderList.Clear();
+            if (ETradeCtrMaxDailyLoss())
+                return;
             NtCancelAllLimitOrders(Account, Instrument);
             _marketPosition = NtGetPositionDirection(Account, Instrument);
+            PrintWithTimeStamp("test2");
+            Print("test3");
             if (_marketPosition != MarketPosition.Flat)
             {
                 _totalPositionQuantity = NtGetUnrealizedQuantity(Account, Instrument);
@@ -212,6 +236,12 @@ namespace NinjaTrader.Custom.Strategy
             return false;
         }
 
+        protected override void OnExecution(IExecution execution)
+        {
+            if (ETradeCtrMaxDailyLoss())
+                return;
+        }
+
         /// <summary>
         /// Called on each bar update event (incoming tick)
         /// </summary>
@@ -231,6 +261,8 @@ namespace NinjaTrader.Custom.Strategy
 
             if (BarsInProgress == 0)
             {
+                PrintWithTimeStamp("Bar0");
+                //If Long
                 if (_totalPositionQuantity > 0)
                 {
                     percForLongExit = PercentForLongExit();
@@ -255,6 +287,7 @@ namespace NinjaTrader.Custom.Strategy
                     double percForLongEntry = PercentForLongEntry();
                     //Check for scaling into long position and then return
                 }
+                    //Else If Short
                 else if (_totalPositionQuantity < 0)
                 {
                     percForShortExit = PercentForShortExit();
@@ -278,7 +311,11 @@ namespace NinjaTrader.Custom.Strategy
                     }
                     //Check for scaling into short position and then return
                 }
+                    //Else If Flat
+                else
+                {
 
+                }
                 ////Check param whether to trade long or short  or both
                 //if (LongEntry)
                 //{
@@ -309,7 +346,9 @@ namespace NinjaTrader.Custom.Strategy
             }
             else if (BarsInProgress == 1)
             {
-                
+                PrintWithTimeStamp("Renko");
+                Print("Plot 0 is: " + FractalLevel(1).Plot0[0]);
+                Print("Plot 1 is: " + FractalLevel(1).Plot1[0]);
             }
             
             
