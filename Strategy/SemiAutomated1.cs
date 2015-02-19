@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using NinjaTrader.Cbi;
 
 #region Using declarations
@@ -40,12 +41,17 @@ namespace NinjaTrader.Custom.Strategy
         private static ConnectionStatus _orderConnectionStatus;
         private static ConnectionStatus _priceConnectionStatus;
         private static MarketPosition _marketPosition;
-        private static int _positionQuantity;
+        private static int _totalPositionQuantity;
         private double _unrealizedPnl;
+        private static int _managedPositionQuantity;
+        private static int _unmanagedPositionQuantity;
         private DataSeries _MyHeikenAshiSeries;
         private static PositionAction _positionAction = PositionAction.DoNothing;
         private  static int percForLongExit;
         private static int percForShortExit;
+        List<IOrder> _managedOrderList = new List<IOrder>();
+        List<Order> _unmanagedOrderList = new List<Order>();
+        //private DataSeries myDataSeries;
 
         // User defined variables (add any user defined variables below)
         #endregion
@@ -54,6 +60,11 @@ namespace NinjaTrader.Custom.Strategy
         {
             percForLongExit = 0;
             percForShortExit = 0;
+            _totalPositionQuantity = 0;
+            _unrealizedPnl = 0;
+            _managedPositionQuantity = 0;
+            _unmanagedPositionQuantity = 0;
+            _unmanagedOrderList.Clear();
         }
         /// <summary>
         /// This method is used to configure the strategy and is called once before any strategy method is called.
@@ -67,20 +78,25 @@ namespace NinjaTrader.Custom.Strategy
             Unmanaged = true;
             RealtimeErrorHandling = NinjaTrader.Strategy.RealtimeErrorHandling.TakeNoAction;
             SyncAccountPosition = false;
-            _positionQuantity = 0;
+            _totalPositionQuantity = 0;
             _unrealizedPnl = 0;
-            Add(PeriodType.Tick, 10);
-            //AddRenko(Instrument.FullName, 50, MarketDataType.LastClose);
+            AddRenko(Instrument.FullName, 50, MarketDataType.Last);
+            //myDataSeries = new DataSeries(this, MaximumBarsLookBack.TwoHundredFiftySix);
+            //Add(PeriodType.Tick, 10);
+            
             
 
             //Log("Error", LogLevel.Error);
             //Log("Information", LogLevel.Information);
             //Log("Warning", LogLevel.Warning);
         }
-        protected override void OnStart()
-        {
-            //Add(HeikenAshi(BarsArray[2]));
-        }
+        //protected override void OnStart()
+        //{
+        //    if (myDataSeries == null)
+        //    {
+        //        myDataSeries = new DataSeries(HeikenAshi(BarsArray[1]));
+        //    }
+        //}
         //protected override void OnOrderStatus(OrderStatusEventArgs e)
         //{
         //    base.OnOrderStatus(e);
@@ -131,19 +147,22 @@ namespace NinjaTrader.Custom.Strategy
                 return;
             }
             ResetValues();
+            _managedOrderList.Clear();
+            _unmanagedOrderList.Clear();
+            NtCancelAllLimitOrders(Account, Instrument);
             _marketPosition = NtGetPositionDirection(Account, Instrument);
             if (_marketPosition != MarketPosition.Flat)
             {
-                _positionQuantity = NtGetUnrealizedQuantity(Account, Instrument);
+                _totalPositionQuantity = NtGetUnrealizedQuantity(Account, Instrument);
                 _unrealizedPnl = NtGetUnrealizedNotional(Account, Instrument);
             }
-            else
-            {
-                _positionQuantity = 0;
-                _unrealizedPnl = 0;
-            }
+            //NtPopulateManualOrders(Account, Instrument, ref _unmanagedOrderList);
         }
 
+        protected override void OnTermination()
+        {
+            _unmanagedOrderList.Clear();
+        }
 
         int PercentForLongExit()
         {
@@ -201,10 +220,10 @@ namespace NinjaTrader.Custom.Strategy
             if (Historical)
                 return;
 
-            if (CurrentBars[0] <= BarsRequired || CurrentBars[1] <= BarsRequired || CurrentBars[2] <= BarsRequired)
+            if (CurrentBars[0] <= BarsRequired || CurrentBars[1] <= BarsRequired)
                 return;
 
-            if (_positionQuantity == 0 && (ToTime(Time[0]) <= 210000 && ToTime(Time[0]) >= 110000))
+            if (_totalPositionQuantity == 0 && (ToTime(Time[0]) <= 210000 && ToTime(Time[0]) >= 110000))
             {
                 return;
             }
@@ -212,13 +231,13 @@ namespace NinjaTrader.Custom.Strategy
 
             if (BarsInProgress == 0)
             {
-                if (_positionQuantity > 0)
+                if (_totalPositionQuantity > 0)
                 {
                     percForLongExit = PercentForLongExit();
                     if (percForLongExit == 100)
                     {
                         NtClosePosition(Account, Instrument);
-                        _positionQuantity = 0;
+                        _totalPositionQuantity = 0;
                         _positionAction = PositionAction.DoNothing;
                         percForLongExit = 0;
                         return;
@@ -236,13 +255,13 @@ namespace NinjaTrader.Custom.Strategy
                     double percForLongEntry = PercentForLongEntry();
                     //Check for scaling into long position and then return
                 }
-                else if (_positionQuantity < 0)
+                else if (_totalPositionQuantity < 0)
                 {
                     percForShortExit = PercentForShortExit();
                     if (percForShortExit == 100)
                     {
                         NtClosePosition(Account, Instrument);
-                        _positionQuantity = 0;
+                        _totalPositionQuantity = 0;
                         _positionAction = PositionAction.DoNothing;
                         percForShortExit = 0;
                         return;
@@ -266,8 +285,8 @@ namespace NinjaTrader.Custom.Strategy
                 //    if (ShouldEnterLong())
                 //    {
                 //        //EnterLong
-                //        _positionQuantity = NtGetPositionQty(Account, Instrument);
-                //        if (_positionQuantity != 0)
+                //        _totalPositionQuantity = NtGetPositionQty(Account, Instrument);
+                //        if (_totalPositionQuantity != 0)
                 //        {
                 //            _marketPosition = MarketPosition.Long;
                 //        }
@@ -279,8 +298,8 @@ namespace NinjaTrader.Custom.Strategy
                 //    if (ShouldEnterShort())
                 //    {
                 //        //EnterShort
-                //        _positionQuantity = NtGetPositionQty(Account, Instrument);
-                //        if (_positionQuantity != 0)
+                //        _totalPositionQuantity = NtGetPositionQty(Account, Instrument);
+                //        if (_totalPositionQuantity != 0)
                 //        {
                 //            _marketPosition = MarketPosition.Short;
                 //        }
@@ -291,10 +310,6 @@ namespace NinjaTrader.Custom.Strategy
             else if (BarsInProgress == 1)
             {
                 
-            }
-            else if (BarsInProgress == 2)
-            {
-
             }
             
             

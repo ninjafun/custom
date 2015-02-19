@@ -392,6 +392,34 @@ namespace NinjaTrader.Strategy
                 }
             }
         }
+
+        public void NtCancelAllLimitOrders(Account account, Instrument instrument)
+        {
+            int iOrderCount = Account.Orders.Count;
+            System.Collections.IEnumerator ListOrders = Account.Orders.GetEnumerator();
+            for (int i = 0; i < iOrderCount; i++)
+            {
+                ListOrders.MoveNext();
+                Order myOrder = ListOrders.Current as NinjaTrader.Cbi.Order;
+                if ((myOrder != null)
+                    && ((myOrder.OrderState == OrderState.Working)
+                    || (myOrder.OrderState == OrderState.PartFilled)
+                    || (myOrder.OrderState == OrderState.Initialized)
+                    || (myOrder.OrderState == OrderState.PendingChange)
+                    || (myOrder.OrderState == OrderState.PendingSubmit)
+                    || (myOrder.OrderState == OrderState.Unknown)))
+                {
+                    try
+                    {
+                        myOrder.Cancel();
+                    }
+                    catch (Exception)
+                    {
+                    }
+                }
+            }
+        }
+
         //private double NtGetUnrealizedNotional(Account account, Instrument instrument)
         //{
         //    MarketPosition marketPosition = NtGetPositionDirection(account, instrument);
