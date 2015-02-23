@@ -1,5 +1,7 @@
 using System.Collections.Generic;
+using System.Xml.Serialization;
 using NinjaTrader.Cbi;
+using NinjaTrader.Indicator;
 
 #region Using declarations
 
@@ -56,6 +58,23 @@ namespace NinjaTrader.Custom.Strategy
         List<IOrder> _managedOrderList = new List<IOrder>();
         List<Order> _unmanagedOrderList = new List<Order>();
         private static bool _backtest = false;
+        private static bool _series1 = false;
+        private static bool _series2 = false;
+        private static double RVar51SMA = 0;
+        private static double RVarUpperFractal0 =0;
+        private static double RVarLowerFractal0 = 0;
+        private double RVarWaveBLong;
+        private double RVarWaveBShort;
+        private double RVarWaveAShort;
+        private double RVarWaveALong;
+        private EMA RVar20EMA;
+        private double TVar51SMA;
+        private double TVar34EAMHigh;
+        private double TVar34EAMLow;
+        private double TVarWaveBLong;
+        private double TVarWaveBShort;
+        private double TVarWaveALong;
+        private double TVarWaveAShort;
         //private DataSeries myDataSeries;
 
         // User defined variables (add any user defined variables below)
@@ -87,9 +106,9 @@ namespace NinjaTrader.Custom.Strategy
             SyncAccountPosition = false;
             _totalPositionQuantity = 0;
             _unrealizedPnl = 0;
-            
             IgnoreOverFill = true;
             AddRenko(Instrument.FullName, RenkoHeight, MarketDataType.Last);
+            Add(PeriodType.Tick, 15);
             //myDataSeries = new DataSeries(this, MaximumBarsLookBack.TwoHundredFiftySix);
             //Add(PeriodType.Tick, 10);
             
@@ -237,7 +256,7 @@ namespace NinjaTrader.Custom.Strategy
             return false;
         }
 
-        bool ShouldEnterShort()
+        bool ShouldEn3terShort()
         {
             return false;
         }
@@ -267,6 +286,34 @@ namespace NinjaTrader.Custom.Strategy
             
             if (BarsInProgress == 0)
             {
+                TVar51SMA = SMA(51)[0];
+                TVar34EAMHigh = EMA(High, 34)[0];
+                TVar34EAMLow = EMA(Low, 34)[0];
+                TVarWaveBLong = NtGetWaveBLong(0);
+                TVarWaveBShort = NtGetWaveBShort(0);
+                TVarWaveALong = NtGetWaveALong(0);
+                TVarWaveAShort = NtGetWaveAShort(0);
+                _series1 = true;
+            }
+            else if (BarsInProgress == 1)
+            {
+                RVar51SMA = SMA(51)[0];
+                RVar20EMA = EMA(20);
+                RVarUpperFractal0 = FractalLevel(1).UpFractals[0];
+                RVarLowerFractal0 = FractalLevel(1).DownFractals[0];
+                RVarWaveBLong = NtGetWaveBLong(0);
+                RVarWaveBShort = NtGetWaveBShort(0);
+                RVarWaveALong = NtGetWaveALong(0);
+                RVarWaveAShort = NtGetWaveAShort(0);
+                PrintWithTimeStamp("Renko");
+                _series2 = true;
+                //Print("Plot 0 is: " + FractalLevel(1).Plot0[0]);
+                //Print("Plot 1 is: " + FractalLevel(1).Plot1[0]);
+            }
+            else if (BarsInProgress == 2)
+            {
+                if (!_series1 || !_series2)
+                    return;
                 PrintWithTimeStamp("Bar0");
                 //If Long
                 if (_totalPositionQuantity > 0)
@@ -277,7 +324,7 @@ namespace NinjaTrader.Custom.Strategy
                         if (BackTest)
                             Position.Close();
                         else
-                            NtClosePosition(Account, Instrument);    
+                            NtClosePosition(Account, Instrument);
                         _totalPositionQuantity = 0;
                         _positionAction = PositionAction.DoNothing;
                         percForLongExit = 0;
@@ -296,7 +343,7 @@ namespace NinjaTrader.Custom.Strategy
                     double percForLongEntry = PercentForLongEntry();
                     //Check for scaling into long position and then return
                 }
-                    //Else If Short
+                //Else If Short
                 else if (_totalPositionQuantity < 0)
                 {
                     percForShortExit = PercentForShortExit();
@@ -323,7 +370,7 @@ namespace NinjaTrader.Custom.Strategy
                     }
                     //Check for scaling into short position and then return
                 }
-                    //Else If Flat
+                //Else If Flat
                 else
                 {
 
@@ -355,12 +402,6 @@ namespace NinjaTrader.Custom.Strategy
                 //    }
                 //    return;
                 //}
-            }
-            else if (BarsInProgress == 1)
-            {
-                PrintWithTimeStamp("Renko");
-                Print("Plot 0 is: " + FractalLevel(1).Plot0[0]);
-                Print("Plot 1 is: " + FractalLevel(1).Plot1[0]);
             }
             
             
@@ -473,6 +514,7 @@ namespace NinjaTrader.Custom.Strategy
             get { return _maxTradeWin; }
             set { _maxTradeWin = Math.Max(1, value); }
         }
+
         #endregion
     }
 }
