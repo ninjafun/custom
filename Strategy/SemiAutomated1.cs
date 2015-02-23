@@ -44,14 +44,18 @@ namespace NinjaTrader.Custom.Strategy
         private static int _totalPositionQuantity;
         private double _unrealizedPnl;
         private double _totalNetPnl;
+        private static int _renkoHeight = 50;
         private static int _managedPositionQuantity;
         private static int _unmanagedPositionQuantity;
         private DataSeries _MyHeikenAshiSeries;
         private static PositionAction _positionAction = PositionAction.DoNothing;
         private  static int percForLongExit;
         private static int percForShortExit;
+        private static int _lowTimeRange = 210000;
+        private static int _upperTimeRange = 110000;
         List<IOrder> _managedOrderList = new List<IOrder>();
         List<Order> _unmanagedOrderList = new List<Order>();
+        private static bool _backtest = false;
         //private DataSeries myDataSeries;
 
         // User defined variables (add any user defined variables below)
@@ -85,7 +89,7 @@ namespace NinjaTrader.Custom.Strategy
             _unrealizedPnl = 0;
             
             IgnoreOverFill = true;
-            AddRenko(Instrument.FullName, 2, MarketDataType.Last);
+            AddRenko(Instrument.FullName, RenkoHeight, MarketDataType.Last);
             //myDataSeries = new DataSeries(this, MaximumBarsLookBack.TwoHundredFiftySix);
             //Add(PeriodType.Tick, 10);
             
@@ -160,6 +164,8 @@ namespace NinjaTrader.Custom.Strategy
 
         protected override void OnConnectionStatus(ConnectionStatus orderStatus, ConnectionStatus priceStatus)
         {
+            if (BackTest)
+                return;
             _orderConnectionStatus = orderStatus;
             _priceConnectionStatus = priceStatus;
             if (_orderConnectionStatus != ConnectionStatus.Connected || _priceConnectionStatus != ConnectionStatus.Connected)
@@ -169,7 +175,7 @@ namespace NinjaTrader.Custom.Strategy
             ResetValues();
             _managedOrderList.Clear();
             _unmanagedOrderList.Clear();
-            if (ETradeCtrMaxDailyLoss())
+            if (!BackTest && ETradeCtrMaxDailyLoss())
                 return;
             NtCancelAllLimitOrders(Account, Instrument);
             _marketPosition = NtGetPositionDirection(Account, Instrument);
@@ -238,7 +244,7 @@ namespace NinjaTrader.Custom.Strategy
 
         protected override void OnExecution(IExecution execution)
         {
-            if (ETradeCtrMaxDailyLoss())
+            if (!BackTest && ETradeCtrMaxDailyLoss())
                 return;
         }
 
@@ -247,18 +253,18 @@ namespace NinjaTrader.Custom.Strategy
         /// </summary>
         protected override void OnBarUpdate()
         {
-            if (Historical)
+            if (!BackTest && Historical)
+                    return;
+
+            //At leat certain amount of bars in both timeframes
+            if (CurrentBars[0] < BarsRequired || CurrentBars[1] < BarsRequired)
                 return;
 
-            if (CurrentBars[0] <= BarsRequired || CurrentBars[1] <= BarsRequired)
+            // If flat and outside of time range - return
+            if (_totalPositionQuantity == 0 && (ToTime(Time[0]) <= LowTimeRange && ToTime(Time[0]) >= UpperTimeRange))
                 return;
-
-            if (_totalPositionQuantity == 0 && (ToTime(Time[0]) <= 210000 && ToTime(Time[0]) >= 110000))
-            {
-                return;
-            }
-
-
+            
+            
             if (BarsInProgress == 0)
             {
                 PrintWithTimeStamp("Bar0");
@@ -268,7 +274,10 @@ namespace NinjaTrader.Custom.Strategy
                     percForLongExit = PercentForLongExit();
                     if (percForLongExit == 100)
                     {
-                        NtClosePosition(Account, Instrument);
+                        if (BackTest)
+                            Position.Close();
+                        else
+                            NtClosePosition(Account, Instrument);    
                         _totalPositionQuantity = 0;
                         _positionAction = PositionAction.DoNothing;
                         percForLongExit = 0;
@@ -293,7 +302,10 @@ namespace NinjaTrader.Custom.Strategy
                     percForShortExit = PercentForShortExit();
                     if (percForShortExit == 100)
                     {
-                        NtClosePosition(Account, Instrument);
+                        if (BackTest)
+                            Position.Close();
+                        else
+                            NtClosePosition(Account, Instrument);
                         _totalPositionQuantity = 0;
                         _positionAction = PositionAction.DoNothing;
                         percForShortExit = 0;
@@ -366,6 +378,38 @@ namespace NinjaTrader.Custom.Strategy
         }
 
         #region Properties
+        [Description("")]
+        [GridCategory("Parameters")]
+        public bool BackTest
+        {
+            get { return _backtest; }
+            set { _backtest = value; }
+        }
+
+        [Description("")]
+        [GridCategory("Parameters")]
+        public int LowTimeRange
+        {
+            get { return _lowTimeRange; }
+            set { _lowTimeRange = Math.Max(1, value); }
+        }
+
+        [Description("")]
+        [GridCategory("Parameters")]
+        public int UpperTimeRange
+        {
+            get { return _upperTimeRange; }
+            set { _upperTimeRange = Math.Max(1, value); }
+        }
+
+        [Description("")]
+        [GridCategory("Parameters")]
+        public int RenkoHeight
+        {
+            get { return _renkoHeight; }
+            set { _renkoHeight = Math.Max(1, value); }
+        }
+
         [Description("")]
         [GridCategory("Parameters")]
         public int Target1
