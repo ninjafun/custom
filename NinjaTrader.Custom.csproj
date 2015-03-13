@@ -111,6 +111,10 @@
     <ErrorReport>prompt</ErrorReport>
   </PropertyGroup>
   <ItemGroup>
+    <Reference Include="log4net, Version=1.2.10.0, Culture=neutral, PublicKeyToken=1b44e1d426115821, processorArchitecture=MSIL">
+      <SpecificVersion>False</SpecificVersion>
+      <HintPath>.\log4net.dll</HintPath>
+    </Reference>
     <Reference Include="NinjaTrader.Core">
       <HintPath>C:\Program Files (x86)\NinjaTrader 7\bin\NinjaTrader.Core.dll</HintPath>
     </Reference>

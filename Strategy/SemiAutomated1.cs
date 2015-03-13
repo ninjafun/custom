@@ -1,9 +1,16 @@
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using System.Xml.Serialization;
+using log4net;
+using log4net.Appender;
+using log4net.Config;
 using NinjaTrader.Cbi;
 using NinjaTrader.Indicator;
+using LogLevel = NinjaTrader.Cbi.LogLevel;
 
 #region Using declarations
+
 
 using System;
 using System.ComponentModel;
@@ -21,7 +28,9 @@ public enum PositionAction
     CloseShort,
     DoNothing
 }
+
 // This namespace holds all strategies and is required. Do not change it.
+
 namespace NinjaTrader.Custom.Strategy
 {
     /// <summary>
@@ -31,6 +40,7 @@ namespace NinjaTrader.Custom.Strategy
     public class SemiAutomated1 : NinjaTrader.Strategy.Strategy
     {
         #region Variables
+
         // Wizard generated variables
         private static int _target1 = 1; // Default setting for Target1
         private static int _exitPercent1 = 100; // Default setting for ExitPercent1
@@ -51,17 +61,17 @@ namespace NinjaTrader.Custom.Strategy
         private static int _unmanagedPositionQuantity;
         private DataSeries _MyHeikenAshiSeries;
         private static PositionAction _positionAction = PositionAction.DoNothing;
-        private  static int percForLongExit;
+        private static int percForLongExit;
         private static int percForShortExit;
         private static int _lowTimeRange = 210000;
         private static int _upperTimeRange = 110000;
-        List<IOrder> _managedOrderList = new List<IOrder>();
-        List<Order> _unmanagedOrderList = new List<Order>();
+        private List<IOrder> _managedOrderList = new List<IOrder>();
+        private List<Order> _unmanagedOrderList = new List<Order>();
         private static bool _backtest = false;
         private static bool _series1 = false;
         private static bool _series2 = false;
         private static double RVar51SMA = 0;
-        private static double RVarUpperFractal0 =0;
+        private static double RVarUpperFractal0 = 0;
         private static double RVarLowerFractal0 = 0;
         private double RVarWaveBLong;
         private double RVarWaveBShort;
@@ -75,9 +85,12 @@ namespace NinjaTrader.Custom.Strategy
         private double TVarWaveBShort;
         private double TVarWaveALong;
         private double TVarWaveAShort;
+        private static readonly ILog logger = LogManager.GetLogger(typeof(SemiAutomated1));
+
         //private DataSeries myDataSeries;
 
         // User defined variables (add any user defined variables below)
+
         #endregion
 
         protected void ResetValues()
@@ -90,6 +103,7 @@ namespace NinjaTrader.Custom.Strategy
             _unmanagedPositionQuantity = 0;
             _unmanagedOrderList.Clear();
         }
+
         /// <summary>
         /// This method is used to configure the strategy and is called once before any strategy method is called.
         /// </summary>
@@ -109,21 +123,29 @@ namespace NinjaTrader.Custom.Strategy
             IgnoreOverFill = true;
             AddRenko(Instrument.FullName, RenkoHeight, MarketDataType.Last);
             Add(PeriodType.Tick, 15);
-            //myDataSeries = new DataSeries(this, MaximumBarsLookBack.TwoHundredFiftySix);
-            //Add(PeriodType.Tick, 10);
-            
-            
+        }
 
-            //Log("Error", LogLevel.Error);
-            //Log("Information", LogLevel.Information);
-            //Log("Warning", LogLevel.Warning);
+        protected override void OnStartUp()
+        {
+            //BasicConfigurator.Configure();
+            //DOMConfigurator.Configure();
+            //var fileAppender = LogManager.GetLoggerRepository()
+            //                 .GetAppenders()
+            //                 .OfType<FileAppender>()
+            //                 .FirstOrDefault(fa => fa.Name == "LogFileAppender");
+            //if (fileAppender != null)
+            //{
+            //    fileAppender.File = Path.Combine(Environment.CurrentDirectory, "foo.txt");
+            //    fileAppender.ActivateOptions();
+            //}
         }
         //protected override void OnStart()
         //{
-        //    if (myDataSeries == null)
-        //    {
-        //        myDataSeries = new DataSeries(HeikenAshi(BarsArray[1]));
-        //    }
+
+        //    //if (myDataSeries == null)
+        //    //{
+        //    //    myDataSeries = new DataSeries(HeikenAshi(BarsArray[1]));
+        //    //}
         //}
         //protected override void OnOrderStatus(OrderStatusEventArgs e)
         //{
@@ -166,7 +188,7 @@ namespace NinjaTrader.Custom.Strategy
         //    Log("myOnOrderTrace", LogLevel.Warning);
         //}
 
-        bool ETradeCtrMaxDailyLoss()
+        private bool ETradeCtrMaxDailyLoss()
         {
             _totalNetPnl = NtGetTotalNetNotional(Account, Instrument);
 
@@ -174,8 +196,8 @@ namespace NinjaTrader.Custom.Strategy
             if ((_totalNetPnl < 0) && Math.Abs(_totalNetPnl) > _maxDailyLoss)
             {
                 NtClosePosition(Account, Instrument);
-                Log("Disabling Strategy because Max Loss reached", LogLevel.Error);
-                Disable();
+                //Log("Disabling Strategy because Max Loss reached", LogLevel.Error);
+                //Disable();
                 return true;
             }
             return false;
@@ -187,7 +209,8 @@ namespace NinjaTrader.Custom.Strategy
                 return;
             _orderConnectionStatus = orderStatus;
             _priceConnectionStatus = priceStatus;
-            if (_orderConnectionStatus != ConnectionStatus.Connected || _priceConnectionStatus != ConnectionStatus.Connected)
+            if (_orderConnectionStatus != ConnectionStatus.Connected ||
+                _priceConnectionStatus != ConnectionStatus.Connected)
             {
                 return;
             }
@@ -213,7 +236,7 @@ namespace NinjaTrader.Custom.Strategy
             _unmanagedOrderList.Clear();
         }
 
-        int PercentForLongExit()
+        private int PercentForLongExit()
         {
             bool exitWaveA = (NtGetWaveALong(0) < 0) && (NtGetWaveAShort(0) < 0);
             bool exitWaveB = (NtGetWaveBLong(0) < 0) && (NtGetWaveBShort(0) < 0);
@@ -222,7 +245,7 @@ namespace NinjaTrader.Custom.Strategy
             return 0;
         }
 
-        int PercentForShortExit()
+        private int PercentForShortExit()
         {
             bool exitWaveA = (NtGetWaveALong(0) > 0) && (NtGetWaveAShort(0) > 0);
             bool exitWaveB = (NtGetWaveBLong(0) > 0) && (NtGetWaveBShort(0) > 0);
@@ -231,32 +254,32 @@ namespace NinjaTrader.Custom.Strategy
             return 0;
         }
 
-        int PercentForLongEntry()
+        private int PercentForLongEntry()
         {
             return 0;
         }
 
-        int PercentForShortEntry()
+        private int PercentForShortEntry()
         {
             return 0;
         }
 
-        int QtyForLongEntry()
+        private int QtyForLongEntry()
         {
             return 0;
         }
 
-        int QtyForShortEntry()
+        private int QtyForShortEntry()
         {
             return 0;
         }
-            
-        bool ShouldEnterLong()
+
+        private bool ShouldEnterLong()
         {
             return false;
         }
 
-        bool ShouldEn3terShort()
+        private bool ShouldEn3terShort()
         {
             return false;
         }
@@ -273,17 +296,29 @@ namespace NinjaTrader.Custom.Strategy
         protected override void OnBarUpdate()
         {
             if (!BackTest && Historical)
-                    return;
+                return;
 
             //At leat certain amount of bars in both timeframes
             if (CurrentBars[0] < BarsRequired || CurrentBars[1] < BarsRequired)
                 return;
+            BasicConfigurator.Configure();
+            //DOMConfigurator.Configure();
+            //var fileAppender = LogManager.GetLoggerRepository()
+            //                 .GetAppenders()
+            //                 .OfType<FileAppender>()
+            //                 .FirstOrDefault(fa => fa.Name == "LogFileAppender");
+            //if (fileAppender != null)
+            //{
+            //    fileAppender.File = Path.Combine(Environment.CurrentDirectory, "foo.txt");
+            //    fileAppender.ActivateOptions();
+            //}
+            logger.Info("Here is a debug log.");
 
             // If flat and outside of time range - return
             if (_totalPositionQuantity == 0 && (ToTime(Time[0]) <= LowTimeRange && ToTime(Time[0]) >= UpperTimeRange))
                 return;
-            
-            
+
+
             if (BarsInProgress == 0)
             {
                 TVar51SMA = SMA(51)[0];
@@ -305,6 +340,7 @@ namespace NinjaTrader.Custom.Strategy
                 RVarWaveBShort = NtGetWaveBShort(0);
                 RVarWaveALong = NtGetWaveALong(0);
                 RVarWaveAShort = NtGetWaveAShort(0);
+                var r = HeikenAshi().HAClose[0];
                 PrintWithTimeStamp("Renko");
                 _series2 = true;
                 //Print("Plot 0 is: " + FractalLevel(1).Plot0[0]);
@@ -318,62 +354,99 @@ namespace NinjaTrader.Custom.Strategy
                 //If Long
                 if (_totalPositionQuantity > 0)
                 {
-                    percForLongExit = PercentForLongExit();
-                    if (percForLongExit == 100)
+                    if (Close[0] <= TVar51SMA
+                        //&& TVar34EAMLow >= TVar51SMA
+                        //&& (TVar34EAMLow - TVar51SMA) < 0.0010
+                        //&& Math.Abs(Close[0] - TVar34EAMLow) < 0.0007
+                        //&& Close[0] > RVar51SMA
+                        && (Close[0] - RVarLowerFractal0) <= -0.0001
+                        //&& RVarUpperFractal0 > RVarLowerFractal0
+                        )
                     {
                         if (BackTest)
                             Position.Close();
                         else
                             NtClosePosition(Account, Instrument);
                         _totalPositionQuantity = 0;
-                        _positionAction = PositionAction.DoNothing;
-                        percForLongExit = 0;
                         return;
                     }
-                    else if (percForLongExit > 0 && percForLongExit < 100)
-                    {
-                        _positionAction = PositionAction.ScaleOutFromLong;
-                        return;
-                    }
-                    else if (percForLongExit == 0)
-                    {
-                        _positionAction = PositionAction.DoNothing;
-                        return;
-                    }
-                    double percForLongEntry = PercentForLongEntry();
-                    //Check for scaling into long position and then return
-                }
-                //Else If Short
-                else if (_totalPositionQuantity < 0)
-                {
-                    percForShortExit = PercentForShortExit();
-                    if (percForShortExit == 100)
+                    if ((NtGetUnrealizedPips(Account, Instrument)) >= 30)
                     {
                         if (BackTest)
                             Position.Close();
                         else
                             NtClosePosition(Account, Instrument);
                         _totalPositionQuantity = 0;
-                        _positionAction = PositionAction.DoNothing;
-                        percForShortExit = 0;
                         return;
                     }
-                    else if (percForShortExit > 0 && percForShortExit < 100)
-                    {
-                        _positionAction = PositionAction.ScaleOutFromShort;
-                        return;
-                    }
-                    else if (percForShortExit == 0)
-                    {
-                        _positionAction = PositionAction.DoNothing;
-                        return;
-                    }
-                    //Check for scaling into short position and then return
+                    //percForLongExit = PercentForLongExit();
+                    //if (percForLongExit == 100)
+                    //{
+                    //    if (BackTest)
+                    //        Position.Close();
+                    //    else
+                    //        NtClosePosition(Account, Instrument);
+                    //    _totalPositionQuantity = 0;
+                    //    _positionAction = PositionAction.DoNothing;
+                    //    percForLongExit = 0;
+                    //    return;
+                    //}
+                    //else if (percForLongExit > 0 && percForLongExit < 100)
+                    //{
+                    //    _positionAction = PositionAction.ScaleOutFromLong;
+                    //    return;
+                    //}
+                    //else if (percForLongExit == 0)
+                    //{
+                    //    _positionAction = PositionAction.DoNothing;
+                    //    return;
+                    //}
+                    //double percForLongEntry = PercentForLongEntry();
+                    ////Check for scaling into long position and then return
                 }
-                //Else If Flat
+                    //Else If Short
+                    //else if (_totalPositionQuantity < 0)
+                    //{
+                    //    percForShortExit = PercentForShortExit();
+                    //    if (percForShortExit == 100)
+                    //    {
+                    //        if (BackTest)
+                    //            Position.Close();
+                    //        else
+                    //            NtClosePosition(Account, Instrument);
+                    //        _totalPositionQuantity = 0;
+                    //        _positionAction = PositionAction.DoNothing;
+                    //        percForShortExit = 0;
+                    //        return;
+                    //    }
+                    //    else if (percForShortExit > 0 && percForShortExit < 100)
+                    //    {
+                    //        _positionAction = PositionAction.ScaleOutFromShort;
+                    //        return;
+                    //    }
+                    //    else if (percForShortExit == 0)
+                    //    {
+                    //        _positionAction = PositionAction.DoNothing;
+                    //        return;
+                    //    }
+                    //    //Check for scaling into short position and then return
+                    //}
+                    //Else If Flat
                 else
                 {
-
+                    if (Close[0] >= TVar51SMA
+                        && TVar34EAMLow >= TVar51SMA
+                        && (TVar34EAMLow - TVar51SMA) < 0.0010
+                        && Math.Abs(Close[0] - TVar34EAMLow) < 0.0007
+                        && Close[0] > RVar51SMA
+                        && (Close[0] - RVarLowerFractal0) >= 0.0001
+                        && RVarUpperFractal0 > RVarLowerFractal0
+                        )
+                    {
+                        _managedOrderList.Add(SubmitOrder(0, OrderAction.Buy, OrderType.Market, MaxTotalQty, 0, 0,
+                            "MyLongOCO", "MyLongSignal"));
+                        _totalPositionQuantity = MaxTotalQty;
+                    }
                 }
                 ////Check param whether to trade long or short  or both
                 //if (LongEntry)
@@ -403,22 +476,21 @@ namespace NinjaTrader.Custom.Strategy
                 //    return;
                 //}
             }
-            
-            
+
 
             //if long or both - check long conditions
-                //if long conditions match - enter position and exit function
+            //if long conditions match - enter position and exit function
             //if short position of both - check short conditions
-                //if short conditions match - enter position and exit function
+            //if short conditions match - enter position and exit function
 
 
             //Check whether to close position
             //Check to add to position
             //Check to exit position
-
         }
 
         #region Properties
+
         [Description("")]
         [GridCategory("Parameters")]
         public bool BackTest
