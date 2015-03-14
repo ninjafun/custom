@@ -2,11 +2,16 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Serialization;
-using log4net;
-using log4net.Appender;
-using log4net.Config;
+//using log4net;
+//using log4net.Repository.Hierarchy;
+//using log4net.Core;
+//using log4net.Appender;
+//using log4net.Layout;
 using NinjaTrader.Cbi;
 using NinjaTrader.Indicator;
+using NLog;
+using NLog.Config;
+using NLog.Targets;
 using LogLevel = NinjaTrader.Cbi.LogLevel;
 
 #region Using declarations
@@ -85,13 +90,26 @@ namespace NinjaTrader.Custom.Strategy
         private double TVarWaveBShort;
         private double TVarWaveALong;
         private double TVarWaveAShort;
-        private static readonly ILog logger = LogManager.GetLogger(typeof(SemiAutomated1));
-
+        private static LoggingConfiguration config = new LoggingConfiguration();
+        private static FileTarget fileTarget = new FileTarget();
+        private static Logger logger = LogManager.GetCurrentClassLogger();
+        //private static readonly ILog TestLog = LogManager.GetLogger(typeof(SemiAutomated1));
+        //private PatternLayout _layout = new PatternLayout();
+        //private const string LOG_PATTERN = "%d [%t] %-5p %m%n";
         //private DataSeries myDataSeries;
 
         // User defined variables (add any user defined variables below)
 
         #endregion
+        //public string DefaultPattern
+        //{
+        //    get { return LOG_PATTERN; }
+        //}
+
+        //public PatternLayout DefaultLayout
+        //{
+        //    get { return _layout; }
+        //}
 
         protected void ResetValues()
         {
@@ -123,10 +141,28 @@ namespace NinjaTrader.Custom.Strategy
             IgnoreOverFill = true;
             AddRenko(Instrument.FullName, RenkoHeight, MarketDataType.Last);
             Add(PeriodType.Tick, 15);
+
         }
 
         protected override void OnStartUp()
         {
+            base.OnStartUp();
+            if (fileTarget.FileName == null)
+            {
+                fileTarget.FileName = "C:\\temp\\" + Instrument.FullName + "nLog.log";
+                fileTarget.Layout = "${longdate} ${callsite} ${level} ${event-context:item=StrategyId}  ${message}";
+
+                config.AddTarget("file", fileTarget);
+                // Step 4. Define rules
+                LoggingRule rule2 = new LoggingRule("*", NLog.LogLevel.Trace, fileTarget);
+                config.LoggingRules.Add(rule2);
+
+                // Step 5. Activate the configuration
+                LogManager.Configuration = config;
+            }
+
+            logger.Debug("startup3");
+            logger.Info("holahola");
             //BasicConfigurator.Configure();
             //DOMConfigurator.Configure();
             //var fileAppender = LogManager.GetLoggerRepository()
@@ -207,6 +243,33 @@ namespace NinjaTrader.Custom.Strategy
         {
             if (BackTest)
                 return;
+            //_layout.ConversionPattern = LOG_PATTERN;
+            //_layout.ActivateOptions();
+            //Hierarchy hierarchy = (Hierarchy)LogManager.GetRepository();
+            //TraceAppender tracer = new TraceAppender();
+            //PatternLayout patternLayout = new PatternLayout();
+
+            //patternLayout.ConversionPattern = LOG_PATTERN;
+            //patternLayout.ActivateOptions();
+
+            //tracer.Layout = patternLayout;
+            //tracer.ActivateOptions();
+            //hierarchy.Root.AddAppender(tracer);
+
+            //RollingFileAppender roller = new RollingFileAppender();
+            //roller.Layout = patternLayout;
+            //roller.AppendToFile = true;
+            //roller.RollingStyle = RollingFileAppender.RollingMode.Size;
+            //roller.MaxSizeRollBackups = 4;
+            //roller.MaximumFileSize = "100KB";
+            //roller.StaticLogFileName = true;
+            //roller.File = "dnservices.txt";
+            //roller.ActivateOptions();
+            //hierarchy.Root.AddAppender(roller);
+
+            //hierarchy.Root.Level = Level.All;
+            //hierarchy.Configured = true;
+            //TestLog.Info("OnStartUp Info");			
             _orderConnectionStatus = orderStatus;
             _priceConnectionStatus = priceStatus;
             if (_orderConnectionStatus != ConnectionStatus.Connected ||
@@ -301,7 +364,7 @@ namespace NinjaTrader.Custom.Strategy
             //At leat certain amount of bars in both timeframes
             if (CurrentBars[0] < BarsRequired || CurrentBars[1] < BarsRequired)
                 return;
-            BasicConfigurator.Configure();
+           // BasicConfigurator.Configure();
             //DOMConfigurator.Configure();
             //var fileAppender = LogManager.GetLoggerRepository()
             //                 .GetAppenders()
@@ -312,7 +375,7 @@ namespace NinjaTrader.Custom.Strategy
             //    fileAppender.File = Path.Combine(Environment.CurrentDirectory, "foo.txt");
             //    fileAppender.ActivateOptions();
             //}
-            logger.Info("Here is a debug log.");
+            //TestLog.Info("Here is a debug log.");
 
             // If flat and outside of time range - return
             if (_totalPositionQuantity == 0 && (ToTime(Time[0]) <= LowTimeRange && ToTime(Time[0]) >= UpperTimeRange))

@@ -21,4 +21,3 @@ using System.Runtime.InteropServices;
 [assembly: ComVisible(false)]
 
 [assembly: AssemblyVersion("7.0.1000.22")]
-[assembly: log4net.Config.XmlConfigurator(ConfigFile = "F:\\Users\\Vadim\\Documents\\NinjaTrader 7\\bin\\Custom\\Web.config", Watch = true)]
