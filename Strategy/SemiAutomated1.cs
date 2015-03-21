@@ -1,3 +1,4 @@
+#region Using declarations
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -14,7 +15,7 @@ using NLog.Config;
 using NLog.Targets;
 using LogLevel = NinjaTrader.Cbi.LogLevel;
 
-#region Using declarations
+
 
 
 using System;
@@ -45,8 +46,9 @@ namespace NinjaTrader.Custom.Strategy
     public class SemiAutomated1 : NinjaTrader.Strategy.Strategy
     {
         #region Variables
-
-        // Wizard generated variables
+        #region RiskOrderManagement
+        private static int _lowTimeRange = 210000;
+        private static int _upperTimeRange = 110000;
         private static int _target1 = 1; // Default setting for Target1
         private static int _exitPercent1 = 100; // Default setting for ExitPercent1
         private static int _maxTotalQty = 100000; // Default setting for MaxTotalQty
@@ -55,52 +57,55 @@ namespace NinjaTrader.Custom.Strategy
         private static double _maxTradeLoss = 500.000; // Default setting for MaxTradeLoss
         private static double _maxDailyLoss = 1; // Default setting for MaxDailyLoss
         private static double _maxTradeWin = 1000; // Default setting for MaxTradeWin
-        private static ConnectionStatus _orderConnectionStatus;
-        private static ConnectionStatus _priceConnectionStatus;
-        private static MarketPosition _marketPosition;
-        private static int _totalPositionQuantity;
         private double _unrealizedPnl;
         private double _totalNetPnl;
-        private static int _renkoHeight = 50;
+        private static int _percForLongExit;
+        private static int _percForShortExit;
+        private static MarketPosition _marketPosition;
+        private static int _totalPositionQuantity;
+        private static ConnectionStatus _orderConnectionStatus;
+        private static ConnectionStatus _priceConnectionStatus;
         private static int _managedPositionQuantity;
         private static int _unmanagedPositionQuantity;
-        private DataSeries _MyHeikenAshiSeries;
         private static PositionAction _positionAction = PositionAction.DoNothing;
-        private static int percForLongExit;
-        private static int percForShortExit;
-        private static int _lowTimeRange = 210000;
-        private static int _upperTimeRange = 110000;
         private List<IOrder> _managedOrderList = new List<IOrder>();
         private List<Order> _unmanagedOrderList = new List<Order>();
         private static bool _backtest = false;
         private static bool _series1 = false;
         private static bool _series2 = false;
-        private static double RVar51SMA = 0;
-        private static double RVarUpperFractal0 = 0;
-        private static double RVarLowerFractal0 = 0;
+        #endregion
+        #region Renko
+        private static int _renkoHeight = 50;
+        private DataSeries _MyHeikenAshiSeries;
+        private static double _rVar51Sma = 0;
+        #endregion       
+        #region Fractals
+        private static double _rVarUpperFractal0 = 0;
+        private static double _rVarLowerFractal0 = 0;
+        #endregion
+        #region Raghee
         private double RVarWaveBLong;
         private double RVarWaveBShort;
         private double RVarWaveAShort;
         private double RVarWaveALong;
         private EMA RVar20EMA;
         private double TVar51SMA;
+        #endregion
+        #region TTMWave
         private double TVar34EAMHigh;
         private double TVar34EAMLow;
         private double TVarWaveBLong;
         private double TVarWaveBShort;
         private double TVarWaveALong;
         private double TVarWaveAShort;
+        #endregion
+        #region NLog
         private static LoggingConfiguration config = new LoggingConfiguration();
         private static FileTarget fileTarget = new FileTarget();
         private static Logger logger = LogManager.GetCurrentClassLogger();
         //private static readonly ILog TestLog = LogManager.GetLogger(typeof(SemiAutomated1));
         //private PatternLayout _layout = new PatternLayout();
         //private const string LOG_PATTERN = "%d [%t] %-5p %m%n";
-        //private DataSeries myDataSeries;
-
-        // User defined variables (add any user defined variables below)
-
-        #endregion
         //public string DefaultPattern
         //{
         //    get { return LOG_PATTERN; }
@@ -110,18 +115,21 @@ namespace NinjaTrader.Custom.Strategy
         //{
         //    get { return _layout; }
         //}
+        #endregion
+        //private DataSeries myDataSeries;
+        #endregion
 
+        #region StartupInitialize
         protected void ResetValues()
         {
-            percForLongExit = 0;
-            percForShortExit = 0;
+            _percForLongExit = 0;
+            _percForShortExit = 0;
             _totalPositionQuantity = 0;
             _unrealizedPnl = 0;
             _managedPositionQuantity = 0;
             _unmanagedPositionQuantity = 0;
             _unmanagedOrderList.Clear();
         }
-
         /// <summary>
         /// This method is used to configure the strategy and is called once before any strategy method is called.
         /// </summary>
@@ -223,22 +231,6 @@ namespace NinjaTrader.Custom.Strategy
         //    base.OnOrderTrace(timestamp, message);
         //    Log("myOnOrderTrace", LogLevel.Warning);
         //}
-
-        private bool ETradeCtrMaxDailyLoss()
-        {
-            _totalNetPnl = NtGetTotalNetNotional(Account, Instrument);
-
-
-            if ((_totalNetPnl < 0) && Math.Abs(_totalNetPnl) > _maxDailyLoss)
-            {
-                NtClosePosition(Account, Instrument);
-                //Log("Disabling Strategy because Max Loss reached", LogLevel.Error);
-                //Disable();
-                return true;
-            }
-            return false;
-        }
-
         protected override void OnConnectionStatus(ConnectionStatus orderStatus, ConnectionStatus priceStatus)
         {
             if (BackTest)
@@ -298,6 +290,26 @@ namespace NinjaTrader.Custom.Strategy
         {
             _unmanagedOrderList.Clear();
         }
+        #endregion
+
+
+        #region ETradeControls
+        private bool ETradeCtrMaxDailyLoss()
+        {
+            _totalNetPnl = NtGetTotalNetNotional(Account, Instrument);
+
+
+            if ((_totalNetPnl < 0) && Math.Abs(_totalNetPnl) > _maxDailyLoss)
+            {
+                NtClosePosition(Account, Instrument);
+                //Log("Disabling Strategy because Max Loss reached", LogLevel.Error);
+                //Disable();
+                return true;
+            }
+            return false;
+        }
+        #endregion
+
 
         private int PercentForLongExit()
         {
@@ -342,7 +354,7 @@ namespace NinjaTrader.Custom.Strategy
             return false;
         }
 
-        private bool ShouldEn3terShort()
+        private bool ShouldEnterShort()
         {
             return false;
         }
@@ -353,9 +365,6 @@ namespace NinjaTrader.Custom.Strategy
                 return;
         }
 
-        /// <summary>
-        /// Called on each bar update event (incoming tick)
-        /// </summary>
         protected override void OnBarUpdate()
         {
             if (!BackTest && Historical)
@@ -395,10 +404,10 @@ namespace NinjaTrader.Custom.Strategy
             }
             else if (BarsInProgress == 1)
             {
-                RVar51SMA = SMA(51)[0];
+                _rVar51Sma = SMA(51)[0];
                 RVar20EMA = EMA(20);
-                RVarUpperFractal0 = FractalLevel(1).UpFractals[0];
-                RVarLowerFractal0 = FractalLevel(1).DownFractals[0];
+                _rVarUpperFractal0 = FractalLevel(1).UpFractals[0];
+                _rVarLowerFractal0 = FractalLevel(1).DownFractals[0];
                 RVarWaveBLong = NtGetWaveBLong(0);
                 RVarWaveBShort = NtGetWaveBShort(0);
                 RVarWaveALong = NtGetWaveALong(0);
@@ -422,7 +431,7 @@ namespace NinjaTrader.Custom.Strategy
                         //&& (TVar34EAMLow - TVar51SMA) < 0.0010
                         //&& Math.Abs(Close[0] - TVar34EAMLow) < 0.0007
                         //&& Close[0] > RVar51SMA
-                        && (Close[0] - RVarLowerFractal0) <= -0.0001
+                        && (Close[0] - _rVarLowerFractal0) <= -0.0001
                         //&& RVarUpperFractal0 > RVarLowerFractal0
                         )
                     {
@@ -501,9 +510,9 @@ namespace NinjaTrader.Custom.Strategy
                         && TVar34EAMLow >= TVar51SMA
                         && (TVar34EAMLow - TVar51SMA) < 0.0010
                         && Math.Abs(Close[0] - TVar34EAMLow) < 0.0007
-                        && Close[0] > RVar51SMA
-                        && (Close[0] - RVarLowerFractal0) >= 0.0001
-                        && RVarUpperFractal0 > RVarLowerFractal0
+                        && Close[0] > _rVar51Sma
+                        && (Close[0] - _rVarLowerFractal0) >= 0.0001
+                        && _rVarUpperFractal0 > _rVarLowerFractal0
                         )
                     {
                         _managedOrderList.Add(SubmitOrder(0, OrderAction.Buy, OrderType.Market, MaxTotalQty, 0, 0,
