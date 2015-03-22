@@ -10,9 +10,11 @@ using System.Xml.Serialization;
 //using log4net.Layout;
 using NinjaTrader.Cbi;
 using NinjaTrader.Indicator;
+using NinjaTrader.Strategy;
+//using NLog;
+//using NLog.Config;
+//using NLog.Targets;
 using NLog;
-using NLog.Config;
-using NLog.Targets;
 using LogLevel = NinjaTrader.Cbi.LogLevel;
 
 
@@ -100,9 +102,7 @@ namespace NinjaTrader.Custom.Strategy
         private double TVarWaveAShort;
         #endregion
         #region NLog
-        private static LoggingConfiguration config = new LoggingConfiguration();
-        private static FileTarget fileTarget = new FileTarget();
-        private static Logger logger = LogManager.GetCurrentClassLogger();
+
         //private static readonly ILog TestLog = LogManager.GetLogger(typeof(SemiAutomated1));
         //private PatternLayout _layout = new PatternLayout();
         //private const string LOG_PATTERN = "%d [%t] %-5p %m%n";
@@ -130,9 +130,7 @@ namespace NinjaTrader.Custom.Strategy
             _unmanagedPositionQuantity = 0;
             _unmanagedOrderList.Clear();
         }
-        /// <summary>
-        /// This method is used to configure the strategy and is called once before any strategy method is called.
-        /// </summary>
+
         protected override void Initialize()
         {
             ClearOutputWindow();
@@ -149,39 +147,12 @@ namespace NinjaTrader.Custom.Strategy
             IgnoreOverFill = true;
             AddRenko(Instrument.FullName, RenkoHeight, MarketDataType.Last);
             Add(PeriodType.Tick, 15);
-
+            Helper.BackTest = BackTest;
         }
 
         protected override void OnStartUp()
         {
-            base.OnStartUp();
-            if (fileTarget.FileName == null)
-            {
-                fileTarget.FileName = "C:\\temp\\" + Instrument.FullName + "nLog.log";
-                fileTarget.Layout = "${longdate} ${callsite} ${level} ${event-context:item=StrategyId}  ${message}";
-
-                config.AddTarget("file", fileTarget);
-                // Step 4. Define rules
-                LoggingRule rule2 = new LoggingRule("*", NLog.LogLevel.Trace, fileTarget);
-                config.LoggingRules.Add(rule2);
-
-                // Step 5. Activate the configuration
-                LogManager.Configuration = config;
-            }
-
-            logger.Debug("startup3");
-            logger.Info("holahola");
-            //BasicConfigurator.Configure();
-            //DOMConfigurator.Configure();
-            //var fileAppender = LogManager.GetLoggerRepository()
-            //                 .GetAppenders()
-            //                 .OfType<FileAppender>()
-            //                 .FirstOrDefault(fa => fa.Name == "LogFileAppender");
-            //if (fileAppender != null)
-            //{
-            //    fileAppender.File = Path.Combine(Environment.CurrentDirectory, "foo.txt");
-            //    fileAppender.ActivateOptions();
-            //}
+            Helper.LogSetup(Instrument.FullName);
         }
         //protected override void OnStart()
         //{
@@ -235,33 +206,7 @@ namespace NinjaTrader.Custom.Strategy
         {
             if (BackTest)
                 return;
-            //_layout.ConversionPattern = LOG_PATTERN;
-            //_layout.ActivateOptions();
-            //Hierarchy hierarchy = (Hierarchy)LogManager.GetRepository();
-            //TraceAppender tracer = new TraceAppender();
-            //PatternLayout patternLayout = new PatternLayout();
-
-            //patternLayout.ConversionPattern = LOG_PATTERN;
-            //patternLayout.ActivateOptions();
-
-            //tracer.Layout = patternLayout;
-            //tracer.ActivateOptions();
-            //hierarchy.Root.AddAppender(tracer);
-
-            //RollingFileAppender roller = new RollingFileAppender();
-            //roller.Layout = patternLayout;
-            //roller.AppendToFile = true;
-            //roller.RollingStyle = RollingFileAppender.RollingMode.Size;
-            //roller.MaxSizeRollBackups = 4;
-            //roller.MaximumFileSize = "100KB";
-            //roller.StaticLogFileName = true;
-            //roller.File = "dnservices.txt";
-            //roller.ActivateOptions();
-            //hierarchy.Root.AddAppender(roller);
-
-            //hierarchy.Root.Level = Level.All;
-            //hierarchy.Configured = true;
-            //TestLog.Info("OnStartUp Info");			
+		
             _orderConnectionStatus = orderStatus;
             _priceConnectionStatus = priceStatus;
             if (_orderConnectionStatus != ConnectionStatus.Connected ||
@@ -272,12 +217,10 @@ namespace NinjaTrader.Custom.Strategy
             ResetValues();
             _managedOrderList.Clear();
             _unmanagedOrderList.Clear();
-            if (!BackTest && ETradeCtrMaxDailyLoss())
+            if (ETradeCtrMaxDailyLoss())
                 return;
             NtCancelAllLimitOrders(Account, Instrument);
             _marketPosition = NtGetPositionDirection(Account, Instrument);
-            PrintWithTimeStamp("test2");
-            Print("test3");
             if (_marketPosition != MarketPosition.Flat)
             {
                 _totalPositionQuantity = NtGetUnrealizedQuantity(Account, Instrument);
@@ -288,6 +231,7 @@ namespace NinjaTrader.Custom.Strategy
 
         protected override void OnTermination()
         {
+
             _unmanagedOrderList.Clear();
         }
         #endregion
@@ -302,8 +246,8 @@ namespace NinjaTrader.Custom.Strategy
             if ((_totalNetPnl < 0) && Math.Abs(_totalNetPnl) > _maxDailyLoss)
             {
                 NtClosePosition(Account, Instrument);
-                //Log("Disabling Strategy because Max Loss reached", LogLevel.Error);
-                //Disable();
+                Helper.logger.Error("Disabling Strategy because Max Loss reached. Loss is: " + _totalNetPnl);
+                Disable();
                 return true;
             }
             return false;

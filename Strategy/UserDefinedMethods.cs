@@ -1,8 +1,10 @@
+#region Using declarations
 using System.Collections.Generic;
 using System.Threading;
-
-#region Using declarations
-
+using NLog;
+using NLog.Config;
+using NLog.Targets;
+using LogLevel = NinjaTrader.Cbi.LogLevel;
 using System;
 using System.ComponentModel;
 using System.Drawing;
@@ -10,10 +12,7 @@ using NinjaTrader.Cbi;
 using NinjaTrader.Data;
 using NinjaTrader.Indicator;
 using NinjaTrader.Strategy;
-
 #endregion
-
-// This namespace holds all strategies and is required. Do not change it.
 
 namespace NinjaTrader.Strategy
 {
@@ -42,6 +41,37 @@ namespace NinjaTrader.Strategy
 
     }
 
+    public static class Helper
+    {
+        private static LoggingConfiguration config = new LoggingConfiguration();
+        private static FileTarget fileTarget = new FileTarget();
+        public static Logger logger = LogManager.GetCurrentClassLogger();
+        public static bool BackTest = true;
+
+        private static string IsBackTest()
+        {
+            if (BackTest)
+                return "BackTest";
+            return "Real";
+        }
+        public static void LogSetup(string instrumentName)
+        {
+            if (fileTarget.FileName == null)
+            {
+                fileTarget.FileName = "C:\\temp\\" + IsBackTest() + instrumentName + "nLog.log";
+                fileTarget.Layout = "${longdate} ${callsite} ${level} ${event-context:item=StrategyId}  ${message}";
+
+                config.AddTarget("file", fileTarget);
+                // Step 4. Define rules
+                LoggingRule rule2 = new LoggingRule("*", NLog.LogLevel.Trace, fileTarget);
+                config.LoggingRules.Add(rule2);
+
+                // Step 5. Activate the configuration
+                LogManager.Configuration = config;
+            }
+        }
+    }
+
     /// <summary>
     /// This file holds all user defined strategy methods.
     /// </summary>
@@ -54,6 +84,7 @@ namespace NinjaTrader.Strategy
         //    Short
         //};
 
+        #region BillWilliams
         public bool NtAODifferentColor(int barsAgo)
         {
             int negCol = 0;
@@ -75,7 +106,9 @@ namespace NinjaTrader.Strategy
             }
             return false;
         }
+        #endregion
 
+        #region RagheeHorner
         public bool NtRagheeDifferentColor(int barsAgo)
         {
             int negCol = 0;
@@ -104,7 +137,9 @@ namespace NinjaTrader.Strategy
             }
             return false;
         }
+        #endregion
 
+        #region GeneralHelpers
         public double NtGetHighest(int numOfBars)
         {
             return BarsArray[0][BarsArray[0].HighestBar(numOfBars)];
@@ -139,7 +174,7 @@ namespace NinjaTrader.Strategy
             }
             return mostLow;
         }
-
+        
         /// <summary>
         /// Series Trend
         /// </summary>
@@ -183,6 +218,7 @@ namespace NinjaTrader.Strategy
 
             return 0;
         }
+        #endregion
 
         #region TTMWave
 
@@ -300,6 +336,17 @@ namespace NinjaTrader.Strategy
 
         public double NtGetTotalNetNotional(Account account, Instrument instrument)
         {
+            if (Helper.BackTest)
+            {
+                return NtGetTotalNetNotionalBackTest(account, instrument);
+            }
+            else
+            {
+                return NtGetTotalNetNotionalReal(account, instrument);
+            }
+        }
+        private double NtGetTotalNetNotionalReal(Account account, Instrument instrument)
+        {
             Position myPosition = account.Positions.FindByInstrument(instrument);
             if (myPosition == null)
             {
@@ -309,7 +356,12 @@ namespace NinjaTrader.Strategy
             double retVal = realizedPnl + myPosition.GetProfitLoss(Close[0], PerformanceUnit.Currency);
             return retVal;
         }
-
+        private double NtGetTotalNetNotionalBackTest(Account account, Instrument instrument)
+        {
+            double realizedPnl = NtGetRealizedPnlBackTest();
+            double unrealizedPnl = Position.GetProfitLoss(Close[0], PerformanceUnit.Currency);
+            return realizedPnl + unrealizedPnl;
+        }
         public int NtGetUnrealizedQuantity(Account account, Instrument instrument)
         {
             Position myPosition = account.Positions.FindByInstrument(instrument);
@@ -319,6 +371,15 @@ namespace NinjaTrader.Strategy
             }
             return myPosition.Quantity;
         }
+
+        private double NtGetRealizedPnlBackTest()
+        {
+            if (Performance.AllTrades.Count > 1)
+                return Performance.AllTrades.TradesPerformance.Currency.CumProfit;
+            else
+                return 0;
+        }
+
         public double NtGetUnrealizedPips(Account account, Instrument instrument)
         {
             Position myPosition = account.Positions.FindByInstrument(instrument);
