@@ -3,23 +3,9 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Xml.Serialization;
-//using log4net;
-//using log4net.Repository.Hierarchy;
-//using log4net.Core;
-//using log4net.Appender;
-//using log4net.Layout;
 using NinjaTrader.Cbi;
 using NinjaTrader.Indicator;
 using NinjaTrader.Strategy;
-//using NLog;
-//using NLog.Config;
-//using NLog.Targets;
-using NLog;
-using LogLevel = NinjaTrader.Cbi.LogLevel;
-
-
-
-
 using System;
 using System.ComponentModel;
 using NinjaTrader.Data;
@@ -49,6 +35,7 @@ namespace NinjaTrader.Custom.Strategy
     {
         #region Variables
         #region RiskOrderManagement
+        private static int _instCounter = 0;
         private static int _lowTimeRange = 210000;
         private static int _upperTimeRange = 110000;
         private static int _target1 = 1; // Default setting for Target1
@@ -101,22 +88,6 @@ namespace NinjaTrader.Custom.Strategy
         private double TVarWaveALong;
         private double TVarWaveAShort;
         #endregion
-        #region NLog
-
-        //private static readonly ILog TestLog = LogManager.GetLogger(typeof(SemiAutomated1));
-        //private PatternLayout _layout = new PatternLayout();
-        //private const string LOG_PATTERN = "%d [%t] %-5p %m%n";
-        //public string DefaultPattern
-        //{
-        //    get { return LOG_PATTERN; }
-        //}
-
-        //public PatternLayout DefaultLayout
-        //{
-        //    get { return _layout; }
-        //}
-        #endregion
-        //private DataSeries myDataSeries;
         #endregion
 
         #region StartupInitialize
@@ -133,75 +104,41 @@ namespace NinjaTrader.Custom.Strategy
 
         protected override void Initialize()
         {
-            ClearOutputWindow();
-            PrintWithTimeStamp("test0");
-            Print("test1");
+            Helper.BackTest = BackTest;
+            //ClearOutputWindow();
+            //PrintWithTimeStamp("test0");
+            //Print("test1");
             CalculateOnBarClose = true;
             BarsRequired = 70;
             ExitOnClose = false;
             Unmanaged = true;
-            RealtimeErrorHandling = NinjaTrader.Strategy.RealtimeErrorHandling.TakeNoAction;
+            RealtimeErrorHandling = RealtimeErrorHandling.TakeNoAction;
             SyncAccountPosition = false;
             _totalPositionQuantity = 0;
             _unrealizedPnl = 0;
             IgnoreOverFill = true;
             AddRenko(Instrument.FullName, RenkoHeight, MarketDataType.Last);
             Add(PeriodType.Tick, 15);
-            Helper.BackTest = BackTest;
         }
 
         protected override void OnStartUp()
         {
+            if (_instCounter++ == 0)
+            {
+                Helper.st = this;
+            }  
             Helper.LogSetup(Instrument.FullName);
         }
-        //protected override void OnStart()
-        //{
-
-        //    //if (myDataSeries == null)
-        //    //{
-        //    //    myDataSeries = new DataSeries(HeikenAshi(BarsArray[1]));
-        //    //}
-        //}
-        //protected override void OnOrderStatus(OrderStatusEventArgs e)
-        //{
-        //    base.OnOrderStatus(e);
-        //    Log("myOnOrderStatus", LogLevel.Warning);
-        //}
-
-        //protected override void OnOrderUpdate(IOrder order)
-        //{
-        //    base.OnOrderUpdate(order);
-        //    Log("myOnOrderUpdate", LogLevel.Warning);
-        //}
-
-        //protected override void OnExecution(IExecution execution)
-        //{
-        //    base.OnExecution(execution);
-        //    Log("myOnExecution", LogLevel.Warning);
-        //}
-
-        //protected override void OnExecutionUpdate(ExecutionUpdateEventArgs e)
-        //{
-        //    base.OnExecutionUpdate(e);
-        //    Log("myOnExecutionUpdate", LogLevel.Warning);
-        //}
 
         //protected override void OnPositionUpdate(IPosition position)
         //{
-        //    //base.OnPositionUpdate(position);
-
-        //    Log("myOnPositionUpdate", LogLevel.Warning);
-        //    Log("myPosition Qty is: " + NtGetPositionQty(Account, Instrument), LogLevel.Warning);
-        //    Log("myPosition AvgPrice is: " + position.AvgPrice, LogLevel.Warning);
-        //    Log("myPosition MarketPosition is: " + NtGetPositionDirection(Account,Instrument), LogLevel.Warning);
+        //    Helper.logger.Debug("myOnPositionUpdate");
+        //    Helper.logger.Debug("myPosition Qty is: " + NtGetPositionQty(Account, Instrument));
+        //    Helper.logger.Debug("myPosition AvgPrice is: " + position.AvgPrice);
+        //    Helper.logger.Debug("myPosition MarketPosition is: " + NtGetPositionDirection(Account, Instrument));
         //    position = null;
         //}
 
-        //protected override void OnOrderTrace(DateTime timestamp, string message)
-        //{
-        //    base.OnOrderTrace(timestamp, message);
-        //    Log("myOnOrderTrace", LogLevel.Warning);
-        //}
         protected override void OnConnectionStatus(ConnectionStatus orderStatus, ConnectionStatus priceStatus)
         {
             if (BackTest)
@@ -231,7 +168,10 @@ namespace NinjaTrader.Custom.Strategy
 
         protected override void OnTermination()
         {
-
+            if (--_instCounter == 0)
+            {
+                Helper.st = null;
+            }  
             _unmanagedOrderList.Clear();
         }
         #endregion
@@ -305,7 +245,7 @@ namespace NinjaTrader.Custom.Strategy
 
         protected override void OnExecution(IExecution execution)
         {
-            if (!BackTest && ETradeCtrMaxDailyLoss())
+            if (ETradeCtrMaxDailyLoss())
                 return;
         }
 
@@ -317,19 +257,7 @@ namespace NinjaTrader.Custom.Strategy
             //At leat certain amount of bars in both timeframes
             if (CurrentBars[0] < BarsRequired || CurrentBars[1] < BarsRequired)
                 return;
-           // BasicConfigurator.Configure();
-            //DOMConfigurator.Configure();
-            //var fileAppender = LogManager.GetLoggerRepository()
-            //                 .GetAppenders()
-            //                 .OfType<FileAppender>()
-            //                 .FirstOrDefault(fa => fa.Name == "LogFileAppender");
-            //if (fileAppender != null)
-            //{
-            //    fileAppender.File = Path.Combine(Environment.CurrentDirectory, "foo.txt");
-            //    fileAppender.ActivateOptions();
-            //}
-            //TestLog.Info("Here is a debug log.");
-
+          
             // If flat and outside of time range - return
             if (_totalPositionQuantity == 0 && (ToTime(Time[0]) <= LowTimeRange && ToTime(Time[0]) >= UpperTimeRange))
                 return;

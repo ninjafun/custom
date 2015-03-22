@@ -1,10 +1,12 @@
 #region Using declarations
 using System.Collections.Generic;
 using System.Threading;
+using System.Windows.Forms;
+using System.Windows.Forms.VisualStyles;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
-using LogLevel = NinjaTrader.Cbi.LogLevel;
+using LogLevel = NLog.LogLevel;// NinjaTrader.Cbi.LogLevel;
 using System;
 using System.ComponentModel;
 using System.Drawing;
@@ -47,7 +49,7 @@ namespace NinjaTrader.Strategy
         private static FileTarget fileTarget = new FileTarget();
         public static Logger logger = LogManager.GetCurrentClassLogger();
         public static bool BackTest = true;
-
+        public static Strategy st;
         private static string IsBackTest()
         {
             if (BackTest)
@@ -70,6 +72,11 @@ namespace NinjaTrader.Strategy
                 LogManager.Configuration = config;
             }
         }
+
+        public static void Log(string message, NLog.LogLevel logLevel)
+        {
+            logger.Log(logLevel, st.Time[0].ToString() + " " + message);
+        }
     }
 
     /// <summary>
@@ -77,6 +84,7 @@ namespace NinjaTrader.Strategy
     /// </summary>
     partial class Strategy
     {
+
         //private enum PositionDirection
         //{
         //    Flat,
@@ -338,7 +346,7 @@ namespace NinjaTrader.Strategy
         {
             if (Helper.BackTest)
             {
-                return NtGetTotalNetNotionalBackTest(account, instrument);
+                return NtGetTotalNetNotionalBackTest();
             }
             else
             {
@@ -356,7 +364,7 @@ namespace NinjaTrader.Strategy
             double retVal = realizedPnl + myPosition.GetProfitLoss(Close[0], PerformanceUnit.Currency);
             return retVal;
         }
-        private double NtGetTotalNetNotionalBackTest(Account account, Instrument instrument)
+        private double NtGetTotalNetNotionalBackTest()
         {
             double realizedPnl = NtGetRealizedPnlBackTest();
             double unrealizedPnl = Position.GetProfitLoss(Close[0], PerformanceUnit.Currency);
@@ -509,16 +517,17 @@ namespace NinjaTrader.Strategy
             //while (ord.OrderState == OrderState.Working)
             //{
             //    Thread.Sleep(2000);
-            //    Log("Working", LogLevel.Warning);
+            //    Helper.Log("Working", LogLevel.Warning);
             //}
             foreach (Account acct in Cbi.Globals.Accounts)
             {
-                Log("acct.Name=" + acct.Name + ", curAcctName=" + accountName, LogLevel.Error);
+                
+                Helper.Log("acct.Name=" + acct.Name + ", curAcctName=" + accountName, LogLevel.Error);
                 if (acct.Name != accountName) continue;
                 var x = GetAccountValue(AccountItem.CashValue);
                 var x2 = GetAccountValue(AccountItem.TotalCashBalance);
                 var x3 = GetAccountValue(AccountItem.BuyingPower);
-                Log(String.Format("CashValue is {0}", x), LogLevel.Warning);
+                Helper.Log(String.Format("CashValue is {0}", x), NLog.LogLevel.Warn);
                 var xa = acct.GetAccountValue(AccountItem.CashValue, Currency.UsDollar);
                 var xa2 = acct.GetAccountValue(AccountItem.TotalCashBalance, Currency.UsDollar);
                 var xa3 = acct.GetAccountValue(AccountItem.BuyingPower, Currency.UsDollar);
@@ -529,7 +538,7 @@ namespace NinjaTrader.Strategy
                     {
                         Print(pos.Account.Name + " " + pos.Instrument + " " + pos.MarketPosition + " " + pos.Quantity +
                               " " + pos.AvgPrice);
-                        Log(
+                        Helper.Log(
                             pos.Account.Name + " " + pos.Instrument + " " + pos.MarketPosition + " " + pos.Quantity +
                             " " + pos.AvgPrice, LogLevel.Error);
                         return pos.Quantity;
