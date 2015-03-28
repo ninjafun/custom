@@ -377,6 +377,11 @@ namespace NinjaTrader.Strategy
             {
                 return 0;
             }
+            
+            if (myPosition.MarketPosition == MarketPosition.Short)
+            {
+                return myPosition.Quantity*-1;
+            }
             return myPosition.Quantity;
         }
 
@@ -405,14 +410,16 @@ namespace NinjaTrader.Strategy
             }
         }
 
-        public void NtClosePosition(Account account, Instrument instrument)
+        public void NtClosePosition(Account account, Instrument instrument, ref int _totalPositionQuantity)
         {
             Position myPosition = account.Positions.FindByInstrument(instrument);
             if (myPosition == null)
             {
+                _totalPositionQuantity = 0;
                 return;
             }
             myPosition.Close();
+            _totalPositionQuantity = 0;
         }
 
         public double NtGetAvgPrice(Account account, Instrument instrument)
@@ -424,15 +431,7 @@ namespace NinjaTrader.Strategy
             }
             return myPosition.AvgPrice;
         }
-        public int NtGetPositionQty(Account account, Instrument instrument)
-        {
-            Position myPosition = account.Positions.FindByInstrument(instrument);
-            if (myPosition == null)
-            {
-                return 0;
-            }
-            return myPosition.Quantity;
-        }
+
         public MarketPosition NtGetPositionDirection(Account account, Instrument instrument)
         {
             Position myPosition = account.Positions.FindByInstrument(instrument);
