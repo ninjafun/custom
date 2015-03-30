@@ -52,7 +52,7 @@ namespace NinjaTrader.Custom.Strategy
         private static double _maxTradeWin = 1000; // Default setting for MaxTradeWin
         private static bool _firstTime = true;
         private double _unrealizedPnl;
-        private double _totalNetPnl;
+//        private double _totalNetPnl;
         private static int _percForLongExit;
         private static int _percForShortExit;
         private static MarketPosition _marketPosition;
@@ -171,7 +171,10 @@ namespace NinjaTrader.Custom.Strategy
             _managedOrderList.Clear();
             _unmanagedOrderList.Clear();
             if (ETradeCtrMaxDailyLoss())
+            {
+                Disable();
                 return;
+            }
             NtCancelAllLimitOrders(Account, Instrument);
             _marketPosition = NtGetPositionDirection(Account, Instrument);
             if (_marketPosition != MarketPosition.Flat)
@@ -197,14 +200,11 @@ namespace NinjaTrader.Custom.Strategy
 
         private bool ETradeCtrMaxDailyLoss()
         {
-            _totalNetPnl = NtGetTotalNetNotional(Account, Instrument);
-
-
-            if ((_totalNetPnl < 0) && Math.Abs(_totalNetPnl) > _maxDailyLoss)
+            double totalNetPnl = NtGetTotalNetNotional(Account, Instrument);
+            if ((totalNetPnl < 0) && Math.Abs(totalNetPnl) > _maxDailyLoss)
             {
                 NtClosePosition(Account, Instrument, ref _totalPositionQuantity);
-                Helper.logger.Error("Disabling Strategy because Max Loss reached. Loss is: " + _totalNetPnl);
-                Disable();
+                Helper.logger.Error("Disabling Strategy because Max Loss reached. Loss is: " + totalNetPnl);
                 return true;
             }
             return false;
