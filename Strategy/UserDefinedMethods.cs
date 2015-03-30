@@ -49,6 +49,7 @@ namespace NinjaTrader.Strategy
         private static FileTarget fileTarget = new FileTarget();
         public static Logger logger = LogManager.GetCurrentClassLogger();
         public static bool BackTest = true;
+        public static int _totalPositionQuantity = 0;
         public static Strategy st;
         private static string IsBackTest()
         {
@@ -56,11 +57,19 @@ namespace NinjaTrader.Strategy
                 return "BackTest";
             return "Real";
         }
-        public static void LogSetup(string instrumentName)
+        public static void LogSetup(string instrumentName, string accountName)
         {
             if (fileTarget.FileName == null)
             {
-                fileTarget.FileName = "C:\\temp\\" + IsBackTest() + instrumentName + "nLog.log";
+                if (IsBackTest() == "BackTest")
+                {
+                    fileTarget.FileName = "C:\\temp\\BackTest" + instrumentName + DateTime.Now + ".log"; 
+                }
+                else
+                {
+                    fileTarget.FileName = "C:\\temp\\" + instrumentName + "_" + accountName + ".log";    
+                }
+                
                 fileTarget.Layout = "${longdate} ${callsite} ${level} ${event-context:item=StrategyId}  ${message}";
 
                 config.AddTarget("file", fileTarget);
@@ -370,6 +379,7 @@ namespace NinjaTrader.Strategy
             double unrealizedPnl = Position.GetProfitLoss(Close[0], PerformanceUnit.Currency);
             return realizedPnl + unrealizedPnl;
         }
+
         public int NtGetUnrealizedQuantity(Account account, Instrument instrument)
         {
             Position myPosition = account.Positions.FindByInstrument(instrument);
@@ -378,10 +388,10 @@ namespace NinjaTrader.Strategy
                 return 0;
             }
             
-            if (myPosition.MarketPosition == MarketPosition.Short)
-            {
-                return myPosition.Quantity*-1;
-            }
+            //if (myPosition.MarketPosition == MarketPosition.Short)
+            //{
+            //    return myPosition.Quantity*-1;
+            //}
             return myPosition.Quantity;
         }
 
@@ -395,30 +405,63 @@ namespace NinjaTrader.Strategy
 
         public double NtGetUnrealizedPips(Account account, Instrument instrument)
         {
-            Position myPosition = account.Positions.FindByInstrument(instrument);
-            if (myPosition == null)
+            if (!Helper.BackTest)
             {
-                return 0;
+
+
+                Position myPosition = account.Positions.FindByInstrument(instrument);
+                if (myPosition == null)
+                {
+                    return 0;
+                }
+                else if (myPosition.MarketPosition == MarketPosition.Long)
+                {
+                    return myPosition.GetProfitLoss(GetCurrentBid(), PerformanceUnit.Points);
+                }
+                else
+                {
+                    return myPosition.GetProfitLoss(GetCurrentAsk(), PerformanceUnit.Points);
+                }
             }
-            else if (myPosition.MarketPosition == MarketPosition.Long)
+            if (Position.MarketPosition == MarketPosition.Long)
             {
-                return myPosition.GetProfitLoss(GetCurrentBid(),PerformanceUnit.Points);
+                return (GetCurrentBid() - Position.AvgPrice)*10000;
+            }
+            else if (Position.MarketPosition == MarketPosition.Short)
+            {
+                return (Position.AvgPrice - GetCurrentAsk()) * 10000;
             }
             else
             {
-                return myPosition.GetProfitLoss(GetCurrentAsk(), PerformanceUnit.Points);
+                return 0;
             }
+            
         }
 
         public void NtClosePosition(Account account, Instrument instrument, ref int _totalPositionQuantity)
         {
-            Position myPosition = account.Positions.FindByInstrument(instrument);
-            if (myPosition == null)
+            if (!Helper.BackTest)
             {
+                Position myPosition = account.Positions.FindByInstrument(instrument);
+                if (myPosition == null)
+                {
+                    _totalPositionQuantity = 0;
+                    return;
+                }
+                myPosition.Close();
                 _totalPositionQuantity = 0;
                 return;
             }
-            myPosition.Close();
+            if (Position.MarketPosition == MarketPosition.Long)
+            {
+                SubmitOrder(0, OrderAction.SellShort, OrderType.Market, _totalPositionQuantity, 0, 0,
+                    "MyLongOCO", "MyLongSignal");
+            }
+            else if (Position.MarketPosition == MarketPosition.Short)
+            {
+                SubmitOrder(0, OrderAction.BuyToCover, OrderType.Market, _totalPositionQuantity, 0, 0,
+                                "MyShortOCO", "MyShortSignal");
+            }
             _totalPositionQuantity = 0;
         }
 
@@ -434,13 +477,18 @@ namespace NinjaTrader.Strategy
 
         public MarketPosition NtGetPositionDirection(Account account, Instrument instrument)
         {
-            Position myPosition = account.Positions.FindByInstrument(instrument);
-            if (myPosition == null)
+            if (!Helper.BackTest)
             {
-                return MarketPosition.Flat;
-            }
 
-            return myPosition.MarketPosition;
+                Position myPosition = account.Positions.FindByInstrument(instrument);
+                if (myPosition == null)
+                {
+                    return MarketPosition.Flat;
+                }
+                
+                return myPosition.MarketPosition;
+            }
+            return Position.MarketPosition;
 
             //int iOrderCount = Account.Orders.Count;
             //Print("Total Open Orders: " + iOrderCount);
