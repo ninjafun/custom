@@ -114,6 +114,7 @@ namespace NinjaTrader.Custom.Strategy
             //_unrealizedPnl = 0;
             _managedPositionQuantity = 0;
             _unmanagedPositionQuantity = 0;
+            _managedOrderList.Clear();
             _unmanagedOrderList.Clear();
         }
 
@@ -167,15 +168,13 @@ namespace NinjaTrader.Custom.Strategy
             {
                 return;
             }
+            NtCancelAllLimitOrders(Account, Instrument);
             ResetValues();
-            _managedOrderList.Clear();
-            _unmanagedOrderList.Clear();
             if (ETradeCtrMaxDailyLoss())
             {
                 Disable();
                 return;
             }
-            NtCancelAllLimitOrders(Account, Instrument);
             _marketPosition = NtGetPositionDirection(Account, Instrument);
             if (_marketPosition != MarketPosition.Flat)
             {
