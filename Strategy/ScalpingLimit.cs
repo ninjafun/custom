@@ -83,215 +83,215 @@ namespace NinjaTrader.Strategy
 
         }
 
-        protected override void OnStartUp()
-        {
-            //NtGetPositionTest(Account, Instrument);
-            //Log("test2", LogLevel.Error);
-            //FileInfo newFile = new FileInfo(@"F:\Users\Vadim\Documents\Unified Functional Testing\ForexFactory1\Output\ForexFactoryInCentralTime.xlsx");
-            //using (ExcelPackage pck = new ExcelPackage(newFile))
-            //{
-            //    ExcelWorksheet ws = pck.Workbook.Worksheets["Events"];
+        //protected override void OnStartUp()
+        //{
+        //    //NtGetPositionTest(Account, Instrument);
+        //    //Log("test2", LogLevel.Error);
+        //    //FileInfo newFile = new FileInfo(@"F:\Users\Vadim\Documents\Unified Functional Testing\ForexFactory1\Output\ForexFactoryInCentralTime.xlsx");
+        //    //using (ExcelPackage pck = new ExcelPackage(newFile))
+        //    //{
+        //    //    ExcelWorksheet ws = pck.Workbook.Worksheets["Events"];
 
-            //    //                ws.Cells["A1"].LoadFromDataTable(dataTable, true);
+        //    //    //                ws.Cells["A1"].LoadFromDataTable(dataTable, true);
                 
-            //}
-        }
+        //    //}
+        //}
 
-        protected override void OnConnectionStatus(ConnectionStatus orderStatus, ConnectionStatus priceStatus)
-        {
-            _orderConnectionStatus = orderStatus;
-            _priceConnectionStatus = priceStatus;
-            if (_orderConnectionStatus != ConnectionStatus.Connected || _priceConnectionStatus != ConnectionStatus.Connected)
-            {
-                return;
-            }
-            _unmanagedOrderList.Clear();
-            NtPopulateManualOrders(Account, Instrument, ref _unmanagedOrderList);
-            _marketPosition = NtGetPositionDirection(Account, Instrument);
-            if (_marketPosition != MarketPosition.Flat)
-            {
-                _positionQuantity = NtGetUnrealizedQuantity(Account, Instrument);
-                _unrealizedPNL = NtGetUnrealizedNotional(Account, Instrument);
-            }
-            else
-            {
-                _positionQuantity = 0;
-                _unrealizedPNL = 0;
-            }
-            for (int i = 0; i < _unmanagedOrderList.Count; i++)
-            {   
-                //_managedOrderList.Add(_unmanagedOrderList[i] as IOrder);
-                _unmanagedOrderCollection.Add(_unmanagedOrderList[i]);
-            }
-            _unmanagedOrderCollection.CollectionChanged += new System.Collections.Specialized.NotifyCollectionChangedEventHandler(order_CollectionChanged);
-        }
+        //protected override void OnConnectionStatus(ConnectionStatus orderStatus, ConnectionStatus priceStatus)
+        //{
+        //    _orderConnectionStatus = orderStatus;
+        //    _priceConnectionStatus = priceStatus;
+        //    if (_orderConnectionStatus != ConnectionStatus.Connected || _priceConnectionStatus != ConnectionStatus.Connected)
+        //    {
+        //        return;
+        //    }
+        //    _unmanagedOrderList.Clear();
+        //    NtPopulateManualOrders(Account, Instrument, ref _unmanagedOrderList);
+        //    _marketPosition = NtGetPositionDirection(Account, Instrument);
+        //    if (_marketPosition != MarketPosition.Flat)
+        //    {
+        //        _positionQuantity = NtGetUnrealizedQuantity(Account, Instrument);
+        //        _unrealizedPNL = NtGetUnrealizedNotional(Account, Instrument);
+        //    }
+        //    else
+        //    {
+        //        _positionQuantity = 0;
+        //        _unrealizedPNL = 0;
+        //    }
+        //    for (int i = 0; i < _unmanagedOrderList.Count; i++)
+        //    {   
+        //        //_managedOrderList.Add(_unmanagedOrderList[i] as IOrder);
+        //        _unmanagedOrderCollection.Add(_unmanagedOrderList[i]);
+        //    }
+        //    _unmanagedOrderCollection.CollectionChanged += new System.Collections.Specialized.NotifyCollectionChangedEventHandler(order_CollectionChanged);
+        //}
 
         
 
-        protected override void OnPositionUpdate(IPosition position)
-        {
-           // MessageBox.Show("Hello4");
-            Print("Position is " + position.MarketPosition);
-        }
+        //protected override void OnPositionUpdate(IPosition position)
+        //{
+        //   // MessageBox.Show("Hello4");
+        //    Print("Position is " + position.MarketPosition);
+        //}
 
-        private void order_CollectionChanged(object sender,
-            System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
-        {
-            foreach (var item in e.NewItems)
-            {
-                Order x = item as Order;
-            }
-            foreach (var item in e.OldItems)
-            {
-                Order x = item as Order;
-            }
-            Thread.Sleep(50);
-        }
-
-
-        /// <summary>
-        /// Called on each bar update event (incoming tick)
-        /// </summary>
-        protected override void OnBarUpdate()
-        {
-            if (Historical)
-                return;
-            foreach (Order order in _unmanagedOrderCollection)
-            {
-                Log(order.OrderState.ToString(), LogLevel.Information);
-                order.Cancel();
-                break;
-            }
-            Thread.Sleep(50);
-            //foreach (IOrder iOrder in _managedOrderList)
-            //{
-            //    Log(iOrder.OrderState.ToString(), LogLevel.Information);
-            //}
+        //private void order_CollectionChanged(object sender,
+        //    System.Collections.Specialized.NotifyCollectionChangedEventArgs e)
+        //{
+        //    foreach (var item in e.NewItems)
+        //    {
+        //        Order x = item as Order;
+        //    }
+        //    foreach (var item in e.OldItems)
+        //    {
+        //        Order x = item as Order;
+        //    }
+        //    Thread.Sleep(50);
+        //}
 
 
-          //  MessageBox.Show("Hello3");
-            Cbi.Position myPosition = Account.Positions.FindByInstrument(Instrument);
-            int iOrderCount = Account.Orders.Count; Print("Total Open Orders: " + iOrderCount); 
-            System.Collections.IEnumerator ListOrders = Account.Orders.GetEnumerator();
-            for (int i = 0; i < iOrderCount; i++)
-            {
-                ListOrders.MoveNext(); 
-                Print(" Open Orders: " + ListOrders.Current);
-                Order myOrder = ListOrders.Current as NinjaTrader.Cbi.Order;
-                if (myOrder.OrderState == OrderState.Working)
-                    myOrder.Cancel();
-            }
+        ///// <summary>
+        ///// Called on each bar update event (incoming tick)
+        ///// </summary>
+        //protected override void OnBarUpdate()
+        //{
+        //    if (Historical)
+        //        return;
+        //    foreach (Order order in _unmanagedOrderCollection)
+        //    {
+        //        Log(order.OrderState.ToString(), LogLevel.Information);
+        //        order.Cancel();
+        //        break;
+        //    }
+        //    Thread.Sleep(50);
+        //    //foreach (IOrder iOrder in _managedOrderList)
+        //    //{
+        //    //    Log(iOrder.OrderState.ToString(), LogLevel.Information);
+        //    //}
 
 
-            Log("test3", LogLevel.Error);
-            if (_backtest == false)
-            {
-                if (Historical)
-                    return;
-            }
-            Print(Position.MarketPosition.ToString() + " " + Position.Quantity.ToString());
-            double pl = Position.GetProfitLoss(Close[0], PerformanceUnit.Currency);
+        //  //  MessageBox.Show("Hello3");
+        //    Cbi.Position myPosition = Account.Positions.FindByInstrument(Instrument);
+        //    int iOrderCount = Account.Orders.Count; Print("Total Open Orders: " + iOrderCount); 
+        //    System.Collections.IEnumerator ListOrders = Account.Orders.GetEnumerator();
+        //    for (int i = 0; i < iOrderCount; i++)
+        //    {
+        //        ListOrders.MoveNext(); 
+        //        Print(" Open Orders: " + ListOrders.Current);
+        //        Order myOrder = ListOrders.Current as NinjaTrader.Cbi.Order;
+        //        if (myOrder.OrderState == OrderState.Working)
+        //            myOrder.Cancel();
+        //    }
+
+
+        //    Log("test3", LogLevel.Error);
+        //    if (_backtest == false)
+        //    {
+        //        if (Historical)
+        //            return;
+        //    }
+        //    Print(Position.MarketPosition.ToString() + " " + Position.Quantity.ToString());
+        //    double pl = Position.GetProfitLoss(Close[0], PerformanceUnit.Currency);
 
  
 
 
-            if (Position.MarketPosition == MarketPosition.Flat)
-            {
-                if (ToTime(Time[0]) >= 20000 && ToTime(Time[0]) <= 80000)
-                {
+        //    if (Position.MarketPosition == MarketPosition.Flat)
+        //    {
+        //        if (ToTime(Time[0]) >= 20000 && ToTime(Time[0]) <= 80000)
+        //        {
 
-                }
-                else
-                    return;
-            }
+        //        }
+        //        else
+        //            return;
+        //    }
 
-            EntryHandling = EntryHandling.UniqueEntries;
-            myTickSize = TickSize * 10;
+        //    EntryHandling = EntryHandling.UniqueEntries;
+        //    myTickSize = TickSize * 10;
 
-            #region Flat
-            if (Position.MarketPosition == MarketPosition.Flat)
-            {
-                //look to enter long or short position
+        //    #region Flat
+        //    if (Position.MarketPosition == MarketPosition.Flat)
+        //    {
+        //        //look to enter long or short position
 
-                if (bwAO().AOValue[0] > 0)
-                {
-                    lowest0 = Open[0] > Close[0] ? Close[0] : Open[0];
-                    lowest1 = Open[1] > Close[1] ? Close[1] : Open[1];
-                    if ((lowest0 > EMA(High, 34)[0])
-                        && (lowest0 > SMA(51)[0])
-                        && (lowest1 > EMA(High, 34)[1])
-                        && (lowest1 > SMA(51)[1]))
-                    {
-                        if (NtRagheeDifferentColor(8))
-                        {
-                            _lFractal = NtGetLowestFractal(stopNumOfBars, 4);
-                            _prevStop = _curStop = _lFractal;
-                            //SetStopLoss("target1", CalculationMode.Price, curStop, false);
+        //        if (bwAO().AOValue[0] > 0)
+        //        {
+        //            lowest0 = Open[0] > Close[0] ? Close[0] : Open[0];
+        //            lowest1 = Open[1] > Close[1] ? Close[1] : Open[1];
+        //            if ((lowest0 > EMA(High, 34)[0])
+        //                && (lowest0 > SMA(51)[0])
+        //                && (lowest1 > EMA(High, 34)[1])
+        //                && (lowest1 > SMA(51)[1]))
+        //            {
+        //                if (NtRagheeDifferentColor(8))
+        //                {
+        //                    _lFractal = NtGetLowestFractal(stopNumOfBars, 4);
+        //                    _prevStop = _curStop = _lFractal;
+        //                    //SetStopLoss("target1", CalculationMode.Price, curStop, false);
 
-                            _curTarget = Close[0] + (target1 * myTickSize);
-                            //prevStop = curStop = Close[0] - (stop1 * myTickSize);
-                            SetProfitTarget("target1", CalculationMode.Price, _curTarget);
-                            SetStopLoss("target1", CalculationMode.Price, _curStop, false);
-                            EnterLong(NumOfContracts, "target1");
-                            PrintWithTimeStamp("Long; stop = " + _curStop.ToString() + "; target = " + _curTarget.ToString());
-                        }
-                    }
+        //                    _curTarget = Close[0] + (target1 * myTickSize);
+        //                    //prevStop = curStop = Close[0] - (stop1 * myTickSize);
+        //                    SetProfitTarget("target1", CalculationMode.Price, _curTarget);
+        //                    SetStopLoss("target1", CalculationMode.Price, _curStop, false);
+        //                    EnterLong(NumOfContracts, "target1");
+        //                    PrintWithTimeStamp("Long; stop = " + _curStop.ToString() + "; target = " + _curTarget.ToString());
+        //                }
+        //            }
 
-                }
-                else if (bwAO().AOValue[0] < 0)
-                {
-                    highest0 = Open[0] > Close[0] ? Open[0] : Close[0];
-                    highest1 = Open[1] > Close[1] ? Open[1] : Close[1];
-                    if ((highest0 < EMA(Low, 34)[0])
-                        && (highest0 < SMA(51)[0])
-                        && (highest1 < EMA(Low, 34)[1])
-                        && (highest1 < SMA(51)[1]))
-                    {
-                        if (NtRagheeDifferentColor(8))
-                        {
-                            _hFractal = NtGetHighestFractal(stopNumOfBars, 4);
-                            _prevStop = _curStop = _hFractal;
-                            //SetStopLoss("target1", CalculationMode.Price, curStop, false);
+        //        }
+        //        else if (bwAO().AOValue[0] < 0)
+        //        {
+        //            highest0 = Open[0] > Close[0] ? Open[0] : Close[0];
+        //            highest1 = Open[1] > Close[1] ? Open[1] : Close[1];
+        //            if ((highest0 < EMA(Low, 34)[0])
+        //                && (highest0 < SMA(51)[0])
+        //                && (highest1 < EMA(Low, 34)[1])
+        //                && (highest1 < SMA(51)[1]))
+        //            {
+        //                if (NtRagheeDifferentColor(8))
+        //                {
+        //                    _hFractal = NtGetHighestFractal(stopNumOfBars, 4);
+        //                    _prevStop = _curStop = _hFractal;
+        //                    //SetStopLoss("target1", CalculationMode.Price, curStop, false);
 
-                            _curTarget = Close[0] - (target1 * myTickSize);
-                            //prevStop = curStop = Close[0] + (stop1 * myTickSize);
-                            SetProfitTarget("target1", CalculationMode.Price, _curTarget);
-                            SetStopLoss("target1", CalculationMode.Price, _curStop, false);
-                            EnterShort(NumOfContracts, "target1");
-                            PrintWithTimeStamp("Short; stop = " + _curStop.ToString() + "; target = " + _curTarget.ToString());
-                        }
-                    }
-                }
+        //                    _curTarget = Close[0] - (target1 * myTickSize);
+        //                    //prevStop = curStop = Close[0] + (stop1 * myTickSize);
+        //                    SetProfitTarget("target1", CalculationMode.Price, _curTarget);
+        //                    SetStopLoss("target1", CalculationMode.Price, _curStop, false);
+        //                    EnterShort(NumOfContracts, "target1");
+        //                    PrintWithTimeStamp("Short; stop = " + _curStop.ToString() + "; target = " + _curTarget.ToString());
+        //                }
+        //            }
+        //        }
 
-            }
-            #endregion
-            else if (Position.MarketPosition == MarketPosition.Long)
-            {
-                _lFractal = NtGetLowestFractal(stopNumOfBars, 4);
-                if (_lFractal > _curStop)
-                {
-                    _curStop = _lFractal;
-                    SetStopLoss("target1", CalculationMode.Price, _curStop, false);
-                }
-                //if (Close[0] < curStop)
-                //{
-                //    ExitLong("target1");
-                //}
-            }
-            else if (Position.MarketPosition == MarketPosition.Short)
-            {
-                _hFractal = NtGetHighestFractal(stopNumOfBars, 4);
-                if (_hFractal < _curStop)
-                {
-                    _curStop = _hFractal;
-                    SetStopLoss("target1", CalculationMode.Price, _curStop, false);
-                }
-                //if (Close[0] > curStop)
-                //{
-                //    ExitShort("target1");
-                //}
-            }
-        }
+        //    }
+        //    #endregion
+        //    else if (Position.MarketPosition == MarketPosition.Long)
+        //    {
+        //        _lFractal = NtGetLowestFractal(stopNumOfBars, 4);
+        //        if (_lFractal > _curStop)
+        //        {
+        //            _curStop = _lFractal;
+        //            SetStopLoss("target1", CalculationMode.Price, _curStop, false);
+        //        }
+        //        //if (Close[0] < curStop)
+        //        //{
+        //        //    ExitLong("target1");
+        //        //}
+        //    }
+        //    else if (Position.MarketPosition == MarketPosition.Short)
+        //    {
+        //        _hFractal = NtGetHighestFractal(stopNumOfBars, 4);
+        //        if (_hFractal < _curStop)
+        //        {
+        //            _curStop = _hFractal;
+        //            SetStopLoss("target1", CalculationMode.Price, _curStop, false);
+        //        }
+        //        //if (Close[0] > curStop)
+        //        //{
+        //        //    ExitShort("target1");
+        //        //}
+        //    }
+        //}
 
 
 
