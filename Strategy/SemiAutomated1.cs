@@ -39,7 +39,7 @@ namespace NinjaTrader.Custom.Strategy
 
         #region RiskOrderManagement
 
-        private static bool _ExecInProgress = false;
+        private static bool _execInProgress = false;
         private static int _instCounter = 0;
         private static int _lowTimeRange = 210000;
         private static int _upperTimeRange = 110000;
@@ -197,7 +197,7 @@ namespace NinjaTrader.Custom.Strategy
             double totalNetPnl = NtGetTotalNetNotional(Account, Instrument);
             if ((totalNetPnl < 0) && Math.Abs(totalNetPnl) > _maxDailyLoss)
             {
-                _ExecInProgress = true;
+                _execInProgress = true;
                 NtClosePosition(Account, Instrument, ref _totalPositionQuantity);
                 Helper.logger.Error("Disabling Strategy because Max Loss reached. Loss is: " + totalNetPnl);
                 return true;
@@ -257,13 +257,11 @@ namespace NinjaTrader.Custom.Strategy
 
         protected override void OnExecution(IExecution execution)
         {
-            //if (ETradeCtrMaxDailyLoss())
-            //    return;
+
             if (!BackTest)
             {
-                
                 NtGetUnrealizedQuantity(Account, Instrument, ref _totalPositionQuantity, ref _marketPosition);
-                _ExecInProgress = false;
+                _execInProgress = false;
             }
         }
         //protected override void OnOrderUpdate(IOrder iOrder)
@@ -307,14 +305,17 @@ namespace NinjaTrader.Custom.Strategy
                     return;
                     break;
                 case 1:
+                    if (ETradeCtrMaxDailyLoss())
+                    {
+                        Disable();
+                        return;
+                    }
                     CalculateRenkoValues();
                     return;
                     break;
                 case 2:
-                    if (_ExecInProgress) 
+                    if (_execInProgress) 
                         return;
-                    //if (!_series1 || !_series2)
-                    //    return;
                     break;
             }
 
@@ -337,7 +338,7 @@ namespace NinjaTrader.Custom.Strategy
                 //Check whether it is time to close position. If it is - close position and exit
                 if (StopLossReached())
                 {
-                    _ExecInProgress = true;
+                    _execInProgress = true;
                     NtClosePosition(Account, Instrument, ref _totalPositionQuantity);
                     Helper.Log("Closing because Stop Loss Reached", NLog.LogLevel.Debug);
                     return;
@@ -345,7 +346,7 @@ namespace NinjaTrader.Custom.Strategy
 
                 if (TargetReached())
                 {
-                    _ExecInProgress = true;
+                    _execInProgress = true;
                     NtClosePosition(Account, Instrument, ref _totalPositionQuantity);
                     Helper.Log("Closing because Target Reached", NLog.LogLevel.Debug);
                     return;
@@ -513,7 +514,7 @@ namespace NinjaTrader.Custom.Strategy
                     if (_curAsk > _lowerEntryRange
                         && _curAsk < _upperEntryRange)
                     {
-                        _ExecInProgress = true;
+                        _execInProgress = true;
                         _managedOrderList.Add(SubmitOrder(0, OrderAction.Buy, OrderType.Market, MaxTotalQty, 0, 0,
                             "", ""));
                             
@@ -526,7 +527,7 @@ namespace NinjaTrader.Custom.Strategy
                     if (_curAsk < _upperEntryRange
                         && _curAsk > _lowerEntryRange)
                     {
-                        _ExecInProgress = true;
+                        _execInProgress = true;
                         _managedOrderList.Add(SubmitOrder(0, OrderAction.Sell, OrderType.Market, MaxTotalQty, 0, 0,
                             "", ""));
                         //_totalPositionQuantity += MaxTotalQty;
