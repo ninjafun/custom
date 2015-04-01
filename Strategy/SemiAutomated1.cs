@@ -288,15 +288,15 @@ namespace NinjaTrader.Custom.Strategy
             _curAsk = GetCurrentAsk();
             _curBid = GetCurrentBid();
 
-            if (_firstTime)
-            {
-                Calculate600TickValues();
-                CalculateRenkoValues();
-                UpdateDesiredTrend();
-                _firstTime = false;
-                if (BarsInProgress != 2)
-                    return;
-            }
+            //if (_firstTime)
+            //{
+            //    Calculate600TickValues();
+            //    CalculateRenkoValues();
+            //    UpdateDesiredTrend();
+            //    _firstTime = false;
+            //    if (BarsInProgress != 2)
+            //        return;
+            //}
 
             switch (BarsInProgress)
             {
@@ -315,6 +315,8 @@ namespace NinjaTrader.Custom.Strategy
                     break;
                 case 2:
                     if (_execInProgress) 
+                        return;
+                    if (!_series1)
                         return;
                     break;
             }
@@ -515,7 +517,7 @@ namespace NinjaTrader.Custom.Strategy
                         && _curAsk < _upperEntryRange)
                     {
                         _execInProgress = true;
-                        _managedOrderList.Add(SubmitOrder(0, OrderAction.Buy, OrderType.Market, MaxTotalQty, 0, 0,
+                        _managedOrderList.Add(SubmitOrder(0, OrderAction.Buy, OrderType.Market, MaxTotalQty - _totalPositionQuantity, 0, 0,
                             "", ""));
                             
                         //_totalPositionQuantity += MaxTotalQty;
@@ -528,7 +530,7 @@ namespace NinjaTrader.Custom.Strategy
                         && _curAsk > _lowerEntryRange)
                     {
                         _execInProgress = true;
-                        _managedOrderList.Add(SubmitOrder(0, OrderAction.Sell, OrderType.Market, MaxTotalQty, 0, 0,
+                        _managedOrderList.Add(SubmitOrder(0, OrderAction.Sell, OrderType.Market, MaxTotalQty - _totalPositionQuantity, 0, 0,
                             "", ""));
                         //_totalPositionQuantity += MaxTotalQty;
 
@@ -614,13 +616,13 @@ namespace NinjaTrader.Custom.Strategy
 
         private void UpdateDesiredTrend()
         {
-            if ((_series1) && (_series2))
+            if (_series1)//((_series1) && (_series2))
             {
                 if (_tVar34EmaHigh > _tVar51Sma
-                    && _curBid > _tVar51Sma
-                    && _curBid < _tVar34EmaHigh
-                    //&& _tVarWaveBLong > 0
-                    //&& _tVarWaveBShort > 0
+                    //&& _curBid > _tVar51Sma
+                    //&& _curBid < _tVar34EmaHigh
+                    && _tVarWaveBLong > 0
+                    && _tVarWaveBShort > 0
                     )
                 {
                     _upperEntryRange = _tVar34EmaHigh;
@@ -628,10 +630,10 @@ namespace NinjaTrader.Custom.Strategy
                     _desiredEntryDirection = PositionAction.ScaleInToLong;
                 }
                 else if (_tVar34EmaLow < _tVar51Sma
-                    && _curAsk < _tVar51Sma
-                    && _curAsk > _tVar34EmaLow                    
-                    //&& _tVarWaveBLong < 0
-                    //&& _tVarWaveBShort < 0
+                    //&& _curAsk < _tVar51Sma
+                    //&& _curAsk > _tVar34EmaLow
+                    && _tVarWaveBLong < 0
+                    && _tVarWaveBShort < 0
                     )
                 {
                     _upperEntryRange = _tVar51Sma;

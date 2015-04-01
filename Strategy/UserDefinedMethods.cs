@@ -416,7 +416,7 @@ namespace NinjaTrader.Strategy
                 }
                 else if (myPosition.MarketPosition == MarketPosition.Long)
                 {
-                    return myPosition.GetProfitLoss(GetCurrentBid(), PerformanceUnit.Points);
+                    return myPosition.GetProfitLoss(GetCurrentBid(), PerformanceUnit.Points) * 10000;
                 }
                 else
                 {
@@ -450,11 +450,21 @@ namespace NinjaTrader.Strategy
                 }
                 else if (pos == MarketPosition.Long)
                 {
+                    if (_totalPositionQuantity == 0)
+                    {
+                        Helper.logger.Error("Cannot close position because Qty is 0");
+                        return;
+                    }
                     SubmitOrder(0, OrderAction.Sell, OrderType.Market, _totalPositionQuantity, 0, 0,
                     "", "");
                 }
                 else if (pos == MarketPosition.Short)
                 {
+                    if (_totalPositionQuantity == 0)
+                    {
+                        Helper.logger.Error("Cannot close position because Qty is 0");
+                        return;
+                    }
                     SubmitOrder(0, OrderAction.Buy, OrderType.Market, _totalPositionQuantity, 0, 0,
                         "", "");
                 }
