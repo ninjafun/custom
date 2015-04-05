@@ -68,7 +68,7 @@ namespace NinjaTrader.Custom.Strategy
         private static bool _backtest = false;
         private static bool _series1 = false;
         private static bool _series2 = false;
-        private static int _stopLossTicksFromMA = 3;
+        private static int _stopLossTicksFromMA = 7;
         #endregion
 
         #region Renko
@@ -327,7 +327,6 @@ namespace NinjaTrader.Custom.Strategy
             {
                 if (EnterNewPosition())
                 {
-                    Helper.Log("Entered new position with Qty " + 10000, NLog.LogLevel.Debug);
                     return;
                 }
                 //If Flat - look for beginnig entry
@@ -519,7 +518,8 @@ namespace NinjaTrader.Custom.Strategy
                         _execInProgress = true;
                         _managedOrderList.Add(SubmitOrder(0, OrderAction.Buy, OrderType.Market, MaxTotalQty - _totalPositionQuantity, 0, 0,
                             "", ""));
-                            
+                        Helper.Log("Entered new position ScaleInToLong with Qty " + (MaxTotalQty - _totalPositionQuantity), NLog.LogLevel.Debug);
+                        Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
                         //_totalPositionQuantity += MaxTotalQty;
                         return true;
                     }
@@ -532,6 +532,8 @@ namespace NinjaTrader.Custom.Strategy
                         _execInProgress = true;
                         _managedOrderList.Add(SubmitOrder(0, OrderAction.Sell, OrderType.Market, MaxTotalQty - _totalPositionQuantity, 0, 0,
                             "", ""));
+                        Helper.Log("Entered new position ScaleInToShort with Qty " + (MaxTotalQty - _totalPositionQuantity), NLog.LogLevel.Debug);
+                        Helper.Log("Cur Bid is " + _curBid, NLog.LogLevel.Debug);
                         //_totalPositionQuantity += MaxTotalQty;
 
                         return true;
@@ -548,6 +550,7 @@ namespace NinjaTrader.Custom.Strategy
                 if (NtGetUnrealizedPips(Account, Instrument) > 50)
                 {
                     Helper.Log("Target Reached:" + NtGetUnrealizedPips(Account, Instrument).ToString() + "pips", NLog.LogLevel.Debug);
+                    Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
                     return true;
                 }
             }
@@ -564,6 +567,7 @@ namespace NinjaTrader.Custom.Strategy
                     if ((_tVar51Sma - _curAsk) > _stopLossTicksFromMA*10*TickSize)
                     {
                         Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
+                        Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
                         return true;
                     }
                 }
@@ -575,6 +579,7 @@ namespace NinjaTrader.Custom.Strategy
                     if ((_curBid - _tVar51Sma) > _stopLossTicksFromMA*10*TickSize)
                     {
                         Helper.Log("Cur Bid is " + _curBid, NLog.LogLevel.Debug);
+                        Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
                         return true;
                     }
                 }
@@ -612,6 +617,16 @@ namespace NinjaTrader.Custom.Strategy
             if (!_series1)
                 _series1 = true;
             UpdateDesiredTrend();
+            Helper.Log(String.Format("_tVar51Sma = {0}," +
+                                     "_tVar34EmaHigh = {1}," +
+                                     "_tVar34EmaLow = {2}," +
+                                     "_tVarWaveBLong = {3}," +
+                                     "_tVarWaveBShort = {4}," +
+                                     "_tVarWaveALong = {5}," +
+                                     "_tVarWaveAShort = {6}," +
+                                     "_desiredEntryDirection = {7}", _tVar51Sma, _tVar34EmaHigh,
+                                     _tVar34EmaLow, _tVarWaveBLong, _tVarWaveBShort,
+                                     _tVarWaveALong, _tVarWaveAShort, _desiredEntryDirection), NLog.LogLevel.Trace);
         }
 
         private void UpdateDesiredTrend()
