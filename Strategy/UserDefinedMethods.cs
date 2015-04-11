@@ -6,6 +6,7 @@ using System.Windows.Forms.VisualStyles;
 using NLog;
 using NLog.Config;
 using NLog.Targets;
+using SlingShot.Utility;
 using LogLevel = NLog.LogLevel;// NinjaTrader.Cbi.LogLevel;
 using System;
 using System.ComponentModel;
@@ -292,18 +293,35 @@ namespace NinjaTrader.Strategy
             rVal = TTMWaveAOC(false).Wave1[barsAgo];
             return rVal;
         }
-
+        public double NtGetWaveAShort(IDataSeries ds, int barsAgo)
+        {
+            double rVal = 0.0;
+            rVal = TTMWaveAOC(ds, false).Wave1[barsAgo];
+            return rVal;
+        }
         public double NtGetWaveALong(int barsAgo)
         {
             double rVal = 0.0;
-            rVal = TTMWaveAOC(BarsArray[0],false).Wave2[barsAgo];
+            rVal = TTMWaveAOC(false).Wave2[barsAgo];
             return rVal;
         }
-
+        public double NtGetWaveALong(IDataSeries ds, int barsAgo)
+        {
+            double rVal = 0.0;
+            rVal = TTMWaveAOC(ds, false).Wave2[barsAgo];
+            return rVal;
+        }
         public double NtGetWaveBShort(int barsAgo)
         {
             double rVal = 0.0;
             rVal = TTMWaveBOC(false).Wave1[barsAgo];
+            return rVal;
+        }
+
+        public double NtGetWaveBShort(IDataSeries ds, int barsAgo)
+        {
+            double rVal = 0.0;
+            rVal = TTMWaveBOC(ds, false).Wave1[barsAgo];
             return rVal;
         }
 
@@ -313,7 +331,12 @@ namespace NinjaTrader.Strategy
             rVal = TTMWaveBOC(false).Wave2[barsAgo];
             return rVal;
         }
-
+        public double NtGetWaveBLong(IDataSeries ds, int barsAgo)
+        {
+            double rVal = 0.0;
+            rVal = TTMWaveBOC(ds, false).Wave2[barsAgo];
+            return rVal;
+        }
         public double NtGetWaveCShort(int barsAgo)
         {
             double rVal = 0.0;
@@ -328,6 +351,26 @@ namespace NinjaTrader.Strategy
             return rVal;
         }
 
+        public double NtGetSlingShotSlow(int barsAgo)
+        {
+            return SlingShot(Color.Red, Color.Green, 38, PriceType.Close, MovingAverageType.HMA, 80, 63, PriceType.Close,
+                MovingAverageType.HMA).SlowMA[barsAgo];
+        }
+        public double NtGetSlingShotSlow(IDataSeries ds, int barsAgo)
+        {
+            return SlingShot(ds, Color.Red, Color.Green, 38, PriceType.Close, MovingAverageType.HMA, 80, 63, PriceType.Close,
+                MovingAverageType.HMA).SlowMA[barsAgo];
+        }
+        public double NtGetSlingShotFast(int barsAgo)
+        {
+            return SlingShot(Color.Red, Color.Green, 38, PriceType.Close, MovingAverageType.HMA, 80, 63, PriceType.Close,
+                MovingAverageType.HMA).FastMA[barsAgo];
+        }
+        public double NtGetSlingShotFast(IDataSeries ds, int barsAgo)
+        {
+            return SlingShot(ds, Color.Red, Color.Green, 38, PriceType.Close, MovingAverageType.HMA, 80, 63, PriceType.Close,
+                MovingAverageType.HMA).FastMA[barsAgo];
+        }
         #endregion
 
         #region OMS

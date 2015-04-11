@@ -39,6 +39,7 @@ namespace NinjaTrader.Custom.Strategy
 
         #region RiskOrderManagement
 
+        private static string _strategyName = "reg";
         private static bool _execInProgress = false;
         private static int _instCounter = 0;
         private static int _lowTimeRange = 210000;
@@ -95,11 +96,14 @@ namespace NinjaTrader.Custom.Strategy
         private double _tVarWaveBShort;
         private double _tVarWaveALong;
         private double _tVarWaveAShort;
+        private double _tVarSlingShotSlow;
+        private double _tVarSlingShotFast;
         private double _lowerEntryRange;
         private double _upperEntryRange;
         private PositionAction _desiredEntryDirection = PositionAction.DoNothing;
         private double _curAsk=0;
         private double _curBid=0;
+        
 
         #endregion
 
@@ -177,6 +181,8 @@ namespace NinjaTrader.Custom.Strategy
                 return;
             }
             NtGetUnrealizedQuantity(Account, Instrument, ref _totalPositionQuantity, ref _marketPosition);
+            Helper.logger.Trace("Quantity is: {0}. Position is: {1}", _totalPositionQuantity, _marketPosition);
+            _firstTime = true;
             //NtPopulateManualOrders(Account, Instrument, ref _unmanagedOrderList);
         }
 
@@ -288,15 +294,15 @@ namespace NinjaTrader.Custom.Strategy
             _curAsk = GetCurrentAsk();
             _curBid = GetCurrentBid();
 
-            //if (_firstTime)
-            //{
-            //    Calculate600TickValues();
-            //    CalculateRenkoValues();
-            //    UpdateDesiredTrend();
-            //    _firstTime = false;
-            //    if (BarsInProgress != 2)
-            //        return;
-            //}
+            if (_firstTime)
+            {
+                Calculate600TickValues();
+                CalculateRenkoValues();
+                //UpdateDesiredTrend();
+                _firstTime = false;
+                if (BarsInProgress != 2)
+                    return;
+            }
 
             switch (BarsInProgress)
             {
@@ -316,8 +322,8 @@ namespace NinjaTrader.Custom.Strategy
                 case 2:
                     if (_execInProgress) 
                         return;
-                    if (!_series1)
-                        return;
+                    //if (!_series1)
+                    //    return;
                     break;
             }
 
@@ -607,13 +613,15 @@ namespace NinjaTrader.Custom.Strategy
 
         private void Calculate600TickValues()
         {
-            _tVar51Sma = SMA(51)[0];
-            _tVar34EmaHigh = EMA(High, 34)[0];
-            _tVar34EmaLow = EMA(Low, 34)[0];
-            _tVarWaveBLong = NtGetWaveBLong(0);
-            _tVarWaveBShort = NtGetWaveBShort(0);
-            _tVarWaveALong = NtGetWaveALong(0);
-            _tVarWaveAShort = NtGetWaveAShort(0);
+            _tVar51Sma = SMA(BarsArray[0], 51)[0];
+            _tVar34EmaHigh = EMA(Highs[0], 34)[0];
+            _tVar34EmaLow = EMA(Lows[0], 34)[0];
+            _tVarWaveBLong = NtGetWaveBLong(BarsArray[0], 0);
+            _tVarWaveBShort = NtGetWaveBShort(BarsArray[0], 0);
+            _tVarWaveALong = NtGetWaveALong(BarsArray[0], 0);
+            _tVarWaveAShort = NtGetWaveAShort(BarsArray[0], 0);
+            _tVarSlingShotSlow = NtGetSlingShotSlow(BarsArray[0], 0);
+            _tVarSlingShotFast = NtGetSlingShotFast(BarsArray[0], 0);
             if (!_series1)
                 _series1 = true;
             UpdateDesiredTrend();
@@ -624,41 +632,52 @@ namespace NinjaTrader.Custom.Strategy
                                      "_tVarWaveBShort = {4}," +
                                      "_tVarWaveALong = {5}," +
                                      "_tVarWaveAShort = {6}," +
-                                     "_desiredEntryDirection = {7}", _tVar51Sma, _tVar34EmaHigh,
+                                     "_tVarSlingShotSlow = {7}," +
+                                     "_tVarSlingShotFast = {8}," +
+                                     "_desiredEntryDirection = {9}", _tVar51Sma, _tVar34EmaHigh,
                                      _tVar34EmaLow, _tVarWaveBLong, _tVarWaveBShort,
-                                     _tVarWaveALong, _tVarWaveAShort, _desiredEntryDirection), NLog.LogLevel.Trace);
+                                     _tVarWaveALong, _tVarWaveAShort,
+                                     _tVarSlingShotSlow, _tVarSlingShotFast, _desiredEntryDirection), NLog.LogLevel.Trace);
         }
 
         private void UpdateDesiredTrend()
         {
             if (_series1)//((_series1) && (_series2))
             {
-                if (_tVar34EmaHigh > _tVar51Sma
-                    //&& _curBid > _tVar51Sma
-                    //&& _curBid < _tVar34EmaHigh
-                    && _tVarWaveBLong > 0
-                    && _tVarWaveBShort > 0
-                    )
+                switch (_strategyName)
                 {
-                    _upperEntryRange = _tVar34EmaHigh;
-                    _lowerEntryRange = _tVar51Sma;
-                    _desiredEntryDirection = PositionAction.ScaleInToLong;
+                    case "slingshot":
+                        break;
+                    default:
+                        if (_tVar34EmaHigh > _tVar51Sma
+                            //&& _curBid > _tVar51Sma
+                            //&& _curBid < _tVar34EmaHigh
+                            && _tVarWaveBLong > 0
+                            && _tVarWaveBShort > 0
+                            )
+                        {
+                            _upperEntryRange = _tVar34EmaHigh;
+                            _lowerEntryRange = _tVar51Sma;
+                            _desiredEntryDirection = PositionAction.ScaleInToLong;
+                        }
+                        else if (_tVar34EmaLow < _tVar51Sma
+                            //&& _curAsk < _tVar51Sma
+                            //&& _curAsk > _tVar34EmaLow
+                            && _tVarWaveBLong < 0
+                            && _tVarWaveBShort < 0
+                            )
+                        {
+                            _upperEntryRange = _tVar51Sma;
+                            _lowerEntryRange = _tVar34EmaLow;
+                            _desiredEntryDirection = PositionAction.ScaleInToShort;
+                        }
+                        else
+                        {
+                            _desiredEntryDirection = PositionAction.DoNothing;
+                        }
+                        break;
                 }
-                else if (_tVar34EmaLow < _tVar51Sma
-                    //&& _curAsk < _tVar51Sma
-                    //&& _curAsk > _tVar34EmaLow
-                    && _tVarWaveBLong < 0
-                    && _tVarWaveBShort < 0
-                    )
-                {
-                    _upperEntryRange = _tVar51Sma;
-                    _lowerEntryRange = _tVar34EmaLow;
-                    _desiredEntryDirection = PositionAction.ScaleInToShort;
-                }
-                else
-                {
-                    _desiredEntryDirection = PositionAction.DoNothing;
-                }
+                
             }
         }
 
