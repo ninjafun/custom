@@ -371,6 +371,23 @@ namespace NinjaTrader.Strategy
             return SlingShot(ds, Color.Red, Color.Green, 38, PriceType.Close, MovingAverageType.HMA, 80, 63, PriceType.Close,
                 MovingAverageType.HMA).FastMA[barsAgo];
         }
+
+        public double NtGetFractalsLow(IDataSeries ds, int barsAgo)
+        {
+            return FractalLevel(ds, 1).Plot1[0];// .DownFractals[barsAgo];
+        }
+
+        public double NtGetFractalsHigh(IDataSeries ds, int barsAgo)
+        {
+            return FractalLevel(ds, 1).Plot0[0];//.UpFractals[barsAgo];
+        }
+
+        public bool NtBetween(double value, double lower, double upper)
+        {
+            if (value >= lower && value <= upper)
+                return true;  
+            return false;
+        }
         #endregion
 
         #region OMS
@@ -425,17 +442,26 @@ namespace NinjaTrader.Strategy
 
         public void NtGetUnrealizedQuantity(Account account, Instrument instrument, ref int quantity, ref MarketPosition position)
         {
-            Position myPosition = account.Positions.FindByInstrument(instrument);
-            if (myPosition == null)
+            if (Helper.BackTest)
             {
-                quantity = 0;
-                position = MarketPosition.Flat;
+                quantity = Position.Quantity;
+                position = Position.MarketPosition;
             }
             else
             {
-                quantity = myPosition.Quantity;
-                position = myPosition.MarketPosition;
+                Position myPosition = account.Positions.FindByInstrument(instrument);
+                if (myPosition == null)
+                {
+                    quantity = 0;
+                    position = MarketPosition.Flat;
+                }
+                else
+                {
+                    quantity = myPosition.Quantity;
+                    position = myPosition.MarketPosition;
+                }
             }
+
         }
 
         private double NtGetRealizedPnlBackTest()

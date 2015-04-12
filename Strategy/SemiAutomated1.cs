@@ -1,8 +1,10 @@
 #region Using declarations
 
 using System.Collections.Generic;
+using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Windows.Forms;
 using System.Xml.Serialization;
 using NinjaTrader.Cbi;
@@ -11,6 +13,7 @@ using NinjaTrader.Strategy;
 using System;
 using System.ComponentModel;
 using NinjaTrader.Data;
+using SlingShot.Utility;
 
 #endregion
 
@@ -39,7 +42,7 @@ namespace NinjaTrader.Custom.Strategy
 
         #region RiskOrderManagement
 
-        private static string _strategyName = "reg";
+        private static string _strategyName = "slingshot";
         private static bool _execInProgress = false;
         private static int _instCounter = 0;
         private static int _lowTimeRange = 210000;
@@ -57,7 +60,7 @@ namespace NinjaTrader.Custom.Strategy
 //        private double _totalNetPnl;
         private static int _percForLongExit;
         private static int _percForShortExit;
-        private static MarketPosition _marketPosition;
+        private static MarketPosition _marketPosition = MarketPosition.Flat;
         private static int _totalPositionQuantity;
         private static ConnectionStatus _orderConnectionStatus;
         private static ConnectionStatus _priceConnectionStatus;
@@ -66,7 +69,7 @@ namespace NinjaTrader.Custom.Strategy
         private static PositionAction _positionAction = PositionAction.DoNothing;
         private List<IOrder> _managedOrderList = new List<IOrder>();
         private List<Order> _unmanagedOrderList = new List<Order>();
-        private static bool _backtest = false;
+        private static bool _backtest = true;
         private static bool _series1 = false;
         private static bool _series2 = false;
         private static int _stopLossTicksFromMA = 7;
@@ -103,7 +106,8 @@ namespace NinjaTrader.Custom.Strategy
         private PositionAction _desiredEntryDirection = PositionAction.DoNothing;
         private double _curAsk=0;
         private double _curBid=0;
-        
+        private double _tVarUpperFractal;
+        private double _tVarLowerFractal;
 
         #endregion
 
@@ -137,9 +141,13 @@ namespace NinjaTrader.Custom.Strategy
             SyncAccountPosition = false;
             _totalPositionQuantity = 0;
             _unrealizedPnl = 0;
+            _execInProgress = false;
             IgnoreOverFill = true;
             AddRenko(Instrument.FullName, RenkoHeight, MarketDataType.Last);
             Add(PeriodType.Tick, 15);
+            Add(FractalLevel(1));
+            Add(SlingShot(Color.Red, Color.Green, 38, PriceType.Close, MovingAverageType.HMA, 80, 63, PriceType.Close,
+                MovingAverageType.HMA));
         }
 
         protected override void OnStartUp()
@@ -200,6 +208,8 @@ namespace NinjaTrader.Custom.Strategy
 
         private bool ETradeCtrMaxDailyLoss()
         {
+            if (BackTest)
+                return false;
             double totalNetPnl = NtGetTotalNetNotional(Account, Instrument);
             if ((totalNetPnl < 0) && Math.Abs(totalNetPnl) > _maxDailyLoss)
             {
@@ -263,12 +273,13 @@ namespace NinjaTrader.Custom.Strategy
 
         protected override void OnExecution(IExecution execution)
         {
-
-            if (!BackTest)
-            {
-                NtGetUnrealizedQuantity(Account, Instrument, ref _totalPositionQuantity, ref _marketPosition);
-                _execInProgress = false;
-            }
+            _execInProgress = false;
+            NtGetUnrealizedQuantity(Account, Instrument, ref _totalPositionQuantity, ref _marketPosition);
+            //if (!BackTest)
+            //{
+            //    NtGetUnrealizedQuantity(Account, Instrument, ref _totalPositionQuantity, ref _marketPosition);
+            //}
+            
         }
         //protected override void OnOrderUpdate(IOrder iOrder)
         //{
@@ -311,23 +322,22 @@ namespace NinjaTrader.Custom.Strategy
                     return;
                     break;
                 case 1:
-                    if (ETradeCtrMaxDailyLoss())
-                    {
-                        Disable();
-                        return;
-                    }
-                    CalculateRenkoValues();
-                    return;
+                    //if (ETradeCtrMaxDailyLoss())
+                    //{
+                    //    Disable();
+                    //    return;
+                    //}
+                    //CalculateRenkoValues();
+                    //return;
                     break;
                 case 2:
-                    if (_execInProgress) 
+                    if (!_series1)
                         return;
-                    //if (!_series1)
-                    //    return;
                     break;
             }
 
-
+            if (_execInProgress)
+                return;
 
             if (_marketPosition == MarketPosition.Flat)
             {
@@ -518,8 +528,7 @@ namespace NinjaTrader.Custom.Strategy
             {
                 if (_desiredEntryDirection == PositionAction.ScaleInToLong)
                 {
-                    if (_curAsk > _lowerEntryRange
-                        && _curAsk < _upperEntryRange)
+                    if (NtBetween(_curAsk, _lowerEntryRange, _upperEntryRange))
                     {
                         _execInProgress = true;
                         _managedOrderList.Add(SubmitOrder(0, OrderAction.Buy, OrderType.Market, MaxTotalQty - _totalPositionQuantity, 0, 0,
@@ -532,8 +541,7 @@ namespace NinjaTrader.Custom.Strategy
                 }
                 else if (_desiredEntryDirection == PositionAction.ScaleInToShort)
                 {
-                    if (_curAsk < _upperEntryRange
-                        && _curAsk > _lowerEntryRange)
+                    if (NtBetween(_curBid, _lowerEntryRange, _upperEntryRange))
                     {
                         _execInProgress = true;
                         _managedOrderList.Add(SubmitOrder(0, OrderAction.Sell, OrderType.Market, MaxTotalQty - _totalPositionQuantity, 0, 0,
@@ -555,7 +563,7 @@ namespace NinjaTrader.Custom.Strategy
             {
                 if (NtGetUnrealizedPips(Account, Instrument) > 50)
                 {
-                    Helper.Log("Target Reached:" + NtGetUnrealizedPips(Account, Instrument).ToString() + "pips", NLog.LogLevel.Debug);
+                    Helper.Log("Target Reached:" + NtGetUnrealizedPips(Account, Instrument) + "pips", NLog.LogLevel.Debug);
                     Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
                     return true;
                 }
@@ -568,25 +576,49 @@ namespace NinjaTrader.Custom.Strategy
             
             if (_marketPosition == MarketPosition.Long)
             {
-                if (_curAsk < _tVar51Sma)
+                if (_strategyName == "slingshot")
                 {
-                    if ((_tVar51Sma - _curAsk) > _stopLossTicksFromMA*10*TickSize)
+                    if (Closes[0][0] < _tVarLowerFractal)
                     {
                         Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
                         Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
                         return true;
                     }
                 }
+                else if (_strategyName == "reg")
+                {
+                    if (_curAsk < _tVar51Sma)
+                    {
+                        if ((_tVar51Sma - _curAsk) > _stopLossTicksFromMA * 10 * TickSize)
+                        {
+                            Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
+                            Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
+                            return true;
+                        }
+                    }
+                }
             }
             else if (_marketPosition == MarketPosition.Short)
             {
-                if (_curBid > _tVar51Sma)
+                if (_strategyName == "slingshot")
                 {
-                    if ((_curBid - _tVar51Sma) > _stopLossTicksFromMA*10*TickSize)
+                    if (Closes[0][0] > _tVarUpperFractal)
                     {
                         Helper.Log("Cur Bid is " + _curBid, NLog.LogLevel.Debug);
                         Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
                         return true;
+                    }
+                }
+                else if (_strategyName == "reg")
+                {
+                    if (_curBid > _tVar51Sma)
+                    {
+                        if ((_curBid - _tVar51Sma) > _stopLossTicksFromMA * 10 * TickSize)
+                        {
+                            Helper.Log("Cur Bid is " + _curBid, NLog.LogLevel.Debug);
+                            Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
+                            return true;
+                        }
                     }
                 }
             }
@@ -622,8 +654,31 @@ namespace NinjaTrader.Custom.Strategy
             _tVarWaveAShort = NtGetWaveAShort(BarsArray[0], 0);
             _tVarSlingShotSlow = NtGetSlingShotSlow(BarsArray[0], 0);
             _tVarSlingShotFast = NtGetSlingShotFast(BarsArray[0], 0);
+            _tVarLowerFractal = NtGetFractalsLow(BarsArray[0], 0);
+            _tVarUpperFractal = NtGetFractalsHigh(BarsArray[0], 0);
+
             if (!_series1)
-                _series1 = true;
+            {
+                if ((_tVar51Sma != 0)
+                    && (_tVar34EmaHigh != 0)
+                    && (_tVar34EmaLow != 0)
+                    && (_tVarWaveBLong != 0)
+                    && (_tVarWaveBShort != 0)
+                    && (_tVarWaveALong != 0)
+                    && (_tVarWaveAShort != 0)
+                    && (_tVarSlingShotSlow != 0)
+                    && (_tVarSlingShotFast != 0)
+                    && (_tVarLowerFractal != 0)
+                    && (_tVarUpperFractal != 0))
+                {
+                    _series1 = true;
+                }
+                else
+                {
+                    return;
+                }
+            }
+               
             UpdateDesiredTrend();
             Helper.Log(String.Format("_tVar51Sma = {0}," +
                                      "_tVar34EmaHigh = {1}," +
@@ -634,10 +689,13 @@ namespace NinjaTrader.Custom.Strategy
                                      "_tVarWaveAShort = {6}," +
                                      "_tVarSlingShotSlow = {7}," +
                                      "_tVarSlingShotFast = {8}," +
-                                     "_desiredEntryDirection = {9}", _tVar51Sma, _tVar34EmaHigh,
+                                     "_desiredEntryDirection = {9}" +
+                                     "_tVarLowerFractal = {10}," +
+                                     "_tVarUpperFractal = {11}", _tVar51Sma, _tVar34EmaHigh,
                                      _tVar34EmaLow, _tVarWaveBLong, _tVarWaveBShort,
                                      _tVarWaveALong, _tVarWaveAShort,
-                                     _tVarSlingShotSlow, _tVarSlingShotFast, _desiredEntryDirection), NLog.LogLevel.Trace);
+                                     _tVarSlingShotSlow, _tVarSlingShotFast, _desiredEntryDirection,
+                                     _tVarLowerFractal, _tVarUpperFractal), NLog.LogLevel.Trace);
         }
 
         private void UpdateDesiredTrend()
@@ -647,6 +705,28 @@ namespace NinjaTrader.Custom.Strategy
                 switch (_strategyName)
                 {
                     case "slingshot":
+                        if ((_tVarSlingShotFast > _tVarSlingShotSlow)
+                            && (Closes[0][0] < _tVarSlingShotFast)
+                            && (_tVarLowerFractal < _tVarUpperFractal)
+                            && (Closes[0][0] > _tVarLowerFractal))
+                        {
+                            _upperEntryRange = (_tVarLowerFractal + _tVarUpperFractal)/2;
+                            _lowerEntryRange = _tVarLowerFractal;
+                            _desiredEntryDirection = PositionAction.ScaleInToLong;
+                        }
+                        else if ((_tVarSlingShotFast < _tVarSlingShotSlow)
+                            && (Closes[0][0] > _tVarSlingShotFast)
+                            && (_tVarLowerFractal < _tVarUpperFractal)
+                            && (Closes[0][0] < _tVarUpperFractal))
+                        {
+                            _upperEntryRange = _tVarUpperFractal;
+                            _lowerEntryRange = (_tVarLowerFractal + _tVarUpperFractal) / 2;
+                            _desiredEntryDirection = PositionAction.ScaleInToShort;
+                        }
+                        else
+                        {
+                            _desiredEntryDirection = PositionAction.DoNothing;
+                        }
                         break;
                     default:
                         if (_tVar34EmaHigh > _tVar51Sma
@@ -689,6 +769,14 @@ namespace NinjaTrader.Custom.Strategy
         {
             get { return _backtest; }
             set { _backtest = value; }
+        }
+
+        [Description("")]
+        [GridCategory("Parameters")]
+        public string StrategyName
+        {
+            get { return _strategyName; }
+            set { _strategyName = value; }
         }
 
         [Description("")]
