@@ -49,7 +49,7 @@ namespace NinjaTrader.Custom.Strategy
         private static int _upperTimeRange = 110000;
         private static int _target1 = 1; // Default setting for Target1
         private static int _exitPercent1 = 100; // Default setting for ExitPercent1
-        private static int _maxTotalQty = 100000; // Default setting for MaxTotalQty
+        private static int _maxTotalQty = 30000; // Default setting for MaxTotalQty
         private static bool _longEntry = true; // Default setting for LongEntry
         private static bool _shortEntry = true; // Default setting for ShortEntry
         private static double _maxTradeLoss = 500.000; // Default setting for MaxTradeLoss
@@ -281,14 +281,14 @@ namespace NinjaTrader.Custom.Strategy
             //}
             
         }
-        //protected override void OnOrderUpdate(IOrder iOrder)
-        //{
-        //    if (!BackTest)
-        //    {
-        //        if (iOrder.OrderState != OrderState.Filled)
-        //            _ExecInProgress = false;
-        //    }
-        //}
+        protected override void OnOrderUpdate(IOrder iOrder)
+        {
+            if (iOrder.OrderState == OrderState.Rejected || iOrder.OrderState == OrderState.Cancelled)
+            {
+                _execInProgress = false;
+                NtGetUnrealizedQuantity(Account, Instrument, ref _totalPositionQuantity, ref _marketPosition);
+            }
+        }
 
         protected override void OnBarUpdate()
         {
