@@ -148,6 +148,7 @@ namespace NinjaTrader.Custom.Strategy
             Add(FractalLevel(1));
             Add(SlingShot(Color.Red, Color.Green, 38, PriceType.Close, MovingAverageType.HMA, 80, 63, PriceType.Close,
                 MovingAverageType.HMA));
+            Add(bwAO());
         }
 
         protected override void OnStartUp()
@@ -376,150 +377,6 @@ namespace NinjaTrader.Custom.Strategy
             }
             
             
-
-
-
-
-
-
-
-
- 
-            ////If Long
-            //if (_totalPositionQuantity > 0)
-            //{
-            //    if (Close[0] <= _tVar51Sma
-            //        //&& _tVar34EAMLow >= _tVar51Sma
-            //        //&& (_tVar34EAMLow - _tVar51Sma) < 0.0010
-            //        //&& Math.Abs(Close[0] - _tVar34EAMLow) < 0.0007
-            //        //&& Close[0] > RVar51SMA
-            //        && (Close[0] - _rVarLowerFractal0) <= -0.0001
-            //        //&& RVarUpperFractal0 > RVarLowerFractal0
-            //        )
-            //    {
-            //        if (BackTest)
-            //            Position.Close();
-            //        else
-            //            NtClosePosition(Account, Instrument);
-            //        _totalPositionQuantity = 0;
-            //        return;
-            //    }
-            //    if ((NtGetUnrealizedPips(Account, Instrument)) >= 30)
-            //    {
-            //        if (BackTest)
-            //            Position.Close();
-            //        else
-            //            NtClosePosition(Account, Instrument);
-            //        _totalPositionQuantity = 0;
-            //        return;
-            //    }
-            //    //percForLongExit = PercentForLongExit();
-            //    //if (percForLongExit == 100)
-            //    //{
-            //    //    if (BackTest)
-            //    //        Position.Close();
-            //    //    else
-            //    //        NtClosePosition(Account, Instrument);
-            //    //    _totalPositionQuantity = 0;
-            //    //    _positionAction = PositionAction.DoNothing;
-            //    //    percForLongExit = 0;
-            //    //    return;
-            //    //}
-            //    //else if (percForLongExit > 0 && percForLongExit < 100)
-            //    //{
-            //    //    _positionAction = PositionAction.ScaleOutFromLong;
-            //    //    return;
-            //    //}
-            //    //else if (percForLongExit == 0)
-            //    //{
-            //    //    _positionAction = PositionAction.DoNothing;
-            //    //    return;
-            //    //}
-            //    //double percForLongEntry = PercentForLongEntry();
-            //    ////Check for scaling into long position and then return
-            //}
-            //    //Else If Short
-            //    //else if (_totalPositionQuantity < 0)
-            //    //{
-            //    //    percForShortExit = PercentForShortExit();
-            //    //    if (percForShortExit == 100)
-            //    //    {
-            //    //        if (BackTest)
-            //    //            Position.Close();
-            //    //        else
-            //    //            NtClosePosition(Account, Instrument);
-            //    //        _totalPositionQuantity = 0;
-            //    //        _positionAction = PositionAction.DoNothing;
-            //    //        percForShortExit = 0;
-            //    //        return;
-            //    //    }
-            //    //    else if (percForShortExit > 0 && percForShortExit < 100)
-            //    //    {
-            //    //        _positionAction = PositionAction.ScaleOutFromShort;
-            //    //        return;
-            //    //    }
-            //    //    else if (percForShortExit == 0)
-            //    //    {
-            //    //        _positionAction = PositionAction.DoNothing;
-            //    //        return;
-            //    //    }
-            //    //    //Check for scaling into short position and then return
-            //    //}
-            //    //Else If Flat
-            //else
-            //{
-            //    if (Close[0] >= _tVar51Sma
-            //        && _tVar34EmaLow >= _tVar51Sma
-            //        && (_tVar34EmaLow - _tVar51Sma) < 0.0010
-            //        && Math.Abs(Close[0] - _tVar34EmaLow) < 0.0007
-            //        && Close[0] > _rVar51Sma
-            //        && (Close[0] - _rVarLowerFractal0) >= 0.0001
-            //        && _rVarUpperFractal0 > _rVarLowerFractal0
-            //        )
-            //    {
-            //        _managedOrderList.Add(SubmitOrder(0, OrderAction.Buy, OrderType.Market, MaxTotalQty, 0, 0,
-            //            "MyLongOCO", "MyLongSignal"));
-            //        _totalPositionQuantity = MaxTotalQty;
-            //    }
-            //}
-            //////Check param whether to trade long or short  or both
-            ////if (LongEntry)
-            ////{
-            ////    if (ShouldEnterLong())
-            ////    {
-            ////        //EnterLong
-            ////        _totalPositionQuantity = NtGetPositionQty(Account, Instrument);
-            ////        if (_totalPositionQuantity != 0)
-            ////        {
-            ////            _marketPosition = MarketPosition.Long;
-            ////        }
-            ////    }
-            ////    return;
-            ////}
-            ////if (ShortEntry)
-            ////{
-            ////    if (ShouldEnterShort())
-            ////    {
-            ////        //EnterShort
-            ////        _totalPositionQuantity = NtGetPositionQty(Account, Instrument);
-            ////        if (_totalPositionQuantity != 0)
-            ////        {
-            ////            _marketPosition = MarketPosition.Short;
-            ////        }
-            ////    }
-            ////    return;
-            ////}
-
-
-            ////if long or both - check long conditions
-            ////if long conditions match - enter position and exit function
-            ////if short position of both - check short conditions
-            ////if short conditions match - enter position and exit function
-
-
-            ////Check whether to close position
-            ////Check to add to position
-            ////Check to exit position
         }
 
         private bool EnterNewPosition()
@@ -727,6 +584,25 @@ namespace NinjaTrader.Custom.Strategy
                         {
                             _desiredEntryDirection = PositionAction.DoNothing;
                         }
+                        break;
+                    case "bwao":
+                        if (_marketPosition == MarketPosition.Flat)
+                        {
+                            //look for long entry
+                            if (_tVarSlingShotFast > _tVarSlingShotSlow)
+                            {
+                                if (Close[0] > _tVarSlingShotSlow
+                                    && Open[0] > _tVarSlingShotSlow)
+                                {
+                                    if (bwAO().AOValue[0] > 0)
+                                    {
+
+                                    }
+                                }
+                            }
+
+                        }
+
                         break;
                     default:
                         if (_tVar34EmaHigh > _tVar51Sma
