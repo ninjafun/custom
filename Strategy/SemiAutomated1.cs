@@ -42,7 +42,7 @@ namespace NinjaTrader.Custom.Strategy
 
         #region RiskOrderManagement
 
-        private static string _strategyName = "slingshot";
+        private static string _strategyName = "bwao";
         private static bool _execInProgress = false;
         private static int _instCounter = 0;
         private static int _lowTimeRange = 210000;
@@ -57,6 +57,7 @@ namespace NinjaTrader.Custom.Strategy
         private static double _maxTradeWin = 1000; // Default setting for MaxTradeWin
         private static bool _firstTime = true;
         private double _unrealizedPnl;
+        private PositionsLevels positionsLevels;
 //        private double _totalNetPnl;
         private static int _percForLongExit;
         private static int _percForShortExit;
@@ -145,10 +146,11 @@ namespace NinjaTrader.Custom.Strategy
             IgnoreOverFill = true;
             AddRenko(Instrument.FullName, RenkoHeight, MarketDataType.Last);
             Add(PeriodType.Tick, 15);
-            Add(FractalLevel(1));
+            //Add(FractalLevel(1));
             Add(SlingShot(Color.Red, Color.Green, 38, PriceType.Close, MovingAverageType.HMA, 80, 63, PriceType.Close,
                 MovingAverageType.HMA));
-            Add(bwAO());
+            //Add(bwAO());
+            positionsLevels = new PositionsLevels();
         }
 
         protected override void OnStartUp()
@@ -309,7 +311,7 @@ namespace NinjaTrader.Custom.Strategy
             if (_firstTime)
             {
                 Calculate600TickValues();
-                CalculateRenkoValues();
+                //CalculateRenkoValues();
                 //UpdateDesiredTrend();
                 _firstTime = false;
                 if (BarsInProgress != 2)
@@ -340,19 +342,15 @@ namespace NinjaTrader.Custom.Strategy
             if (_execInProgress)
                 return;
 
-            if (_marketPosition == MarketPosition.Flat)
+            /*  If Not Flat ->  check to exit position
+             *                  If Exit Poition ->  Return
+             *                  
+             *  Check to Enter or add to existing position
+             *  
+                
+            */
+            if (_marketPosition != MarketPosition.Flat)
             {
-                if (EnterNewPosition())
-                {
-                    return;
-                }
-                //If Flat - look for beginnig entry
-                //If did enter - exit
-            
-            }
-            else
-            {
-
                 //Check whether it is time to close position. If it is - close position and exit
                 if (StopLossReached())
                 {
@@ -369,12 +367,47 @@ namespace NinjaTrader.Custom.Strategy
                     Helper.Log("Closing because Target Reached", NLog.LogLevel.Debug);
                     return;
                 }
-                //If In Position - look to scale out
-                //If did scale out - return
-
-                //If In Position - look to scale in
-                //If scaled in - return
             }
+            if (EnterNewPosition())
+            {
+                return;
+            }
+
+            //if (_marketPosition == MarketPosition.Flat)
+            //{
+            //    if (EnterNewPosition())
+            //    {
+            //        return;
+            //    }
+            //    //If Flat - look for beginnig entry
+            //    //If did enter - exit
+            
+            //}
+            //else
+            //{
+
+            //    //Check whether it is time to close position. If it is - close position and exit
+            //    if (StopLossReached())
+            //    {
+            //        _execInProgress = true;
+            //        NtClosePosition(Account, Instrument, ref _totalPositionQuantity);
+            //        Helper.Log("Closing because Stop Loss Reached", NLog.LogLevel.Debug);
+            //        return;
+            //    }
+
+            //    if (TargetReached())
+            //    {
+            //        _execInProgress = true;
+            //        NtClosePosition(Account, Instrument, ref _totalPositionQuantity);
+            //        Helper.Log("Closing because Target Reached", NLog.LogLevel.Debug);
+            //        return;
+            //    }
+            //    //If In Position - look to scale out
+            //    //If did scale out - return
+
+            //    //If In Position - look to scale in
+            //    //If scaled in - return
+            //}
             
             
         }
@@ -385,6 +418,58 @@ namespace NinjaTrader.Custom.Strategy
             {
                 if (_desiredEntryDirection == PositionAction.ScaleInToLong)
                 {
+                    if (_strategyName == "bwao")
+                    {
+                        if (NtBetween(_curAsk, positionsLevels.Medium, positionsLevels.Agro))
+                        {
+                            if (_totalPositionQuantity < 2000)
+                            {
+                                _execInProgress = true;
+                                Helper.Log(
+                                    "Entered Agro position ScaleInToLong with Qty " +
+                                    (2000 - _totalPositionQuantity), NLog.LogLevel.Debug);
+                                Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
+                                _managedOrderList.Add(SubmitOrder(0, OrderAction.Buy, OrderType.Market,
+                                    2000 - _totalPositionQuantity, 0, 0,
+                                    "", ""));
+
+                                //_totalPositionQuantity += MaxTotalQty;
+                                return true;
+                            }
+                            return false;
+                        }
+
+                        if (NtBetween(_curAsk, positionsLevels.Cons, positionsLevels.Medium))
+                        {
+                            if (_totalPositionQuantity < 6000)
+                            {
+                                _execInProgress = true;
+                                Helper.Log(
+                                    "Entered Medium position ScaleInToLong with Qty " +
+                                    (6000 - _totalPositionQuantity), NLog.LogLevel.Debug);
+                                Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
+                                _managedOrderList.Add(SubmitOrder(0, OrderAction.Buy, OrderType.Market,
+                                    6000 - _totalPositionQuantity, 0, 0,
+                                    "", ""));
+
+                                //_totalPositionQuantity += MaxTotalQty;
+                                return true;
+                            }
+                            return false;
+                        }
+                        if (NtBetween(_curAsk, positionsLevels.Cons - 0.0030, positionsLevels.Cons))
+                        {
+                            _execInProgress = true;
+                            Helper.Log("Entered cons position ScaleInToLong with Qty " + (MaxTotalQty - _totalPositionQuantity), NLog.LogLevel.Debug);
+                            Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
+                            _managedOrderList.Add(SubmitOrder(0, OrderAction.Buy, OrderType.Market, MaxTotalQty - _totalPositionQuantity, 0, 0,
+                                "", ""));
+
+                            //_totalPositionQuantity += MaxTotalQty;
+                            return true;
+                        }
+                        return false;
+                    }
                     if (NtBetween(_curAsk, _lowerEntryRange, _upperEntryRange))
                     {
                         _execInProgress = true;
@@ -398,7 +483,60 @@ namespace NinjaTrader.Custom.Strategy
                 }
                 else if (_desiredEntryDirection == PositionAction.ScaleInToShort)
                 {
-                    if (NtBetween(_curBid, _lowerEntryRange, _upperEntryRange))
+                    if (_strategyName == "bwao")
+                    {
+                        if (NtBetween(_curBid, positionsLevels.Agro, positionsLevels.Medium))
+                        {
+                            if (_totalPositionQuantity < 2000)
+                            {
+                                _execInProgress = true;
+                                Helper.Log(
+                                    "Entered Agro position ScaleInToShort with Qty " +
+                                    (2000 - _totalPositionQuantity), NLog.LogLevel.Debug);
+                                Helper.Log("Cur Bid is " + _curBid, NLog.LogLevel.Debug);
+                                _managedOrderList.Add(SubmitOrder(0, OrderAction.Sell, OrderType.Market,
+                                    2000 - _totalPositionQuantity, 0, 0,
+                                    "", ""));
+
+                                //_totalPositionQuantity += MaxTotalQty;
+                                return true;
+                            }
+                            return false;
+                        }
+
+                        if (NtBetween(_curBid, positionsLevels.Medium, positionsLevels.Cons))
+                        {
+                            if (_totalPositionQuantity < 6000)
+                            {
+                                _execInProgress = true;
+                                Helper.Log(
+                                    "Entered Medium position ScaleInToShort with Qty " +
+                                    (6000 - _totalPositionQuantity), NLog.LogLevel.Debug);
+                                Helper.Log("Cur Bid is " + _curBid, NLog.LogLevel.Debug);
+                                _managedOrderList.Add(SubmitOrder(0, OrderAction.Sell, OrderType.Market,
+                                    6000 - _totalPositionQuantity, 0, 0,
+                                    "", ""));
+
+                                //_totalPositionQuantity += MaxTotalQty;
+                                return true;
+                            }
+                            return false;
+                        }
+                        if (NtBetween(_curBid, positionsLevels.Cons, positionsLevels.Cons + 0.0030))
+                        {
+                            _execInProgress = true;
+                            Helper.Log("Entered cons position ScaleInToShort with Qty " + (MaxTotalQty - _totalPositionQuantity), NLog.LogLevel.Debug);
+                            Helper.Log("Cur Bid is " + _curBid, NLog.LogLevel.Debug);
+                            _managedOrderList.Add(SubmitOrder(0, OrderAction.Sell, OrderType.Market, MaxTotalQty - _totalPositionQuantity, 0, 0,
+                                "", ""));
+
+                            //_totalPositionQuantity += MaxTotalQty;
+                            return true;
+                        }
+
+                        return false;
+                    }
+                    else if (NtBetween(_curBid, _lowerEntryRange, _upperEntryRange))
                     {
                         _execInProgress = true;
                         _managedOrderList.Add(SubmitOrder(0, OrderAction.Sell, OrderType.Market, MaxTotalQty - _totalPositionQuantity, 0, 0,
@@ -421,7 +559,7 @@ namespace NinjaTrader.Custom.Strategy
                 if (NtGetUnrealizedPips(Account, Instrument) > 50)
                 {
                     Helper.Log("Target Reached:" + NtGetUnrealizedPips(Account, Instrument) + "pips", NLog.LogLevel.Debug);
-                    Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
+                    Helper.Log("Cur Ask is " + _curAsk + ", Cur Bid is " + _curBid + "Cur Pos was " + _marketPosition, NLog.LogLevel.Debug);
                     return true;
                 }
             }
@@ -433,50 +571,69 @@ namespace NinjaTrader.Custom.Strategy
             
             if (_marketPosition == MarketPosition.Long)
             {
-                if (_strategyName == "slingshot")
+                switch (_strategyName)
                 {
-                    if (Closes[0][0] < _tVarLowerFractal)
-                    {
-                        Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
-                        Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
-                        return true;
-                    }
-                }
-                else if (_strategyName == "reg")
-                {
-                    if (_curAsk < _tVar51Sma)
-                    {
-                        if ((_tVar51Sma - _curAsk) > _stopLossTicksFromMA * 10 * TickSize)
-                        {
-                            Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
-                            Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
-                            return true;
-                        }
-                    }
-                }
-            }
-            else if (_marketPosition == MarketPosition.Short)
-            {
-                if (_strategyName == "slingshot")
-                {
-                    if (Closes[0][0] > _tVarUpperFractal)
-                    {
-                        Helper.Log("Cur Bid is " + _curBid, NLog.LogLevel.Debug);
-                        Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
-                        return true;
-                    }
-                }
-                else if (_strategyName == "reg")
-                {
-                    if (_curBid > _tVar51Sma)
-                    {
-                        if ((_curBid - _tVar51Sma) > _stopLossTicksFromMA * 10 * TickSize)
+                    case "bwao":
+                        if (NtGetSlingShotTrend(BarsArray[0], 0) != PositionAction.ScaleInToLong)
                         {
                             Helper.Log("Cur Bid is " + _curBid, NLog.LogLevel.Debug);
                             Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
                             return true;
                         }
-                    }
+                        break;
+                    case "slingshot":
+                        if (Closes[0][0] < _tVarLowerFractal)
+                        {
+                            Helper.Log("Cur Bid is " + _curBid, NLog.LogLevel.Debug);
+                            Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
+                            return true;
+                        }
+                        break;
+                    case "reg":
+                        if (_curBid < _tVar51Sma)
+                        {
+                            if ((_tVar51Sma - _curBid) > _stopLossTicksFromMA * 10 * TickSize)
+                            {
+                                Helper.Log("Cur Bid is " + _curBid, NLog.LogLevel.Debug);
+                                Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
+                                return true;
+                            }
+                        }
+                        break;
+                }
+
+            }
+            else if (_marketPosition == MarketPosition.Short)
+            {
+                switch (_strategyName)
+                {
+                    case "bwao":
+                        if (NtGetSlingShotTrend(BarsArray[0], 0) != PositionAction.ScaleInToShort)
+                        {
+                            Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
+                            Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
+                            return true;
+                        }
+                        break;
+                    case "slingshot":
+                        if (Closes[0][0] > _tVarUpperFractal)
+                        {
+                            Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
+                            Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
+                            return true;
+                        }
+                        break;
+                    case "reg":
+                        if (_curAsk > _tVar51Sma)
+                        {
+                            if ((_curAsk - _tVar51Sma) > _stopLossTicksFromMA * 10 * TickSize)
+                            {
+                                Helper.Log("Cur Ask is " + _curAsk, NLog.LogLevel.Debug);
+                                Helper.Log("StopLossReached with Qty " + (_totalPositionQuantity), NLog.LogLevel.Debug);
+                                return true;
+                            }
+                        }
+                        break;
                 }
             }
             return false;
@@ -586,23 +743,42 @@ namespace NinjaTrader.Custom.Strategy
                         }
                         break;
                     case "bwao":
-                        if (_marketPosition == MarketPosition.Flat)
+                        /*
+                         * Slingshot Green
+                         * BW above zero
+                         * Low > 5 pips of Slingshot Fast
+                         * Price < 20 pips of Slingshot Fast 
+                         */
+                        //if (_marketPosition == MarketPosition.Flat)
+                        //{
+                        //    //look for long entry
+                        //    if (_tVarSlingShotFast > _tVarSlingShotSlow
+                        //        && bwAO().AOValue[0] > 0
+                        //        && Close[0] > _tVarSlingShotFast
+                        //            && Open[0] > _tVarSlingShotSlow)
+                        //    {
+
+                                 
+                        //    }
+                        //}
+                        _desiredEntryDirection = NtGetSlingShotTrend(Closes[0], 0);
+                        if (_desiredEntryDirection == PositionAction.ScaleInToLong)
                         {
-                            //look for long entry
-                            if (_tVarSlingShotFast > _tVarSlingShotSlow)
-                            {
-                                if (Close[0] > _tVarSlingShotSlow
-                                    && Open[0] > _tVarSlingShotSlow)
-                                {
-                                    if (bwAO().AOValue[0] > 0)
-                                    {
-
-                                    }
-                                }
-                            }
-
+                            positionsLevels.Cons = Math.Min(NtGetSlingShotFast(0), NtGetSlingShotSlow(0))-0.0005;
+                            positionsLevels.Medium = Math.Max(NtGetSlingShotFast(0), NtGetSlingShotSlow(0));
+                            positionsLevels.Agro = Math.Max(NtGetSlingShotFast(0), NtGetSlingShotSlow(0)) + 0.0030;
                         }
-
+                        else if (_desiredEntryDirection == PositionAction.ScaleInToShort)
+                        {
+                            positionsLevels.Cons = Math.Max(NtGetSlingShotFast(0), NtGetSlingShotSlow(0)) + 0.0005;
+                            positionsLevels.Medium = Math.Min(NtGetSlingShotFast(0), NtGetSlingShotSlow(0));
+                            positionsLevels.Agro = Math.Min(NtGetSlingShotFast(0), NtGetSlingShotSlow(0)) - 0.0030;
+                        }
+                        Helper.Log(String.Format("positionsLevels.Cons = {0}," +
+                                     "positionsLevels.Medium = {1}," +
+                                     "positionsLevels.Agro = {2}," +
+                                     "_desiredEntryDirection = {3}", positionsLevels.Cons, positionsLevels.Medium,
+                                     positionsLevels.Agro, _desiredEntryDirection), NLog.LogLevel.Trace);
                         break;
                     default:
                         if (_tVar34EmaHigh > _tVar51Sma
@@ -652,7 +828,7 @@ namespace NinjaTrader.Custom.Strategy
         public string StrategyName
         {
             get { return _strategyName; }
-            set { _strategyName = value; }
+            set { _strategyName = String.IsNullOrEmpty(value) ? "bwao" : value; }
         }
 
         [Description("")]
@@ -744,5 +920,15 @@ namespace NinjaTrader.Custom.Strategy
         }
 
         #endregion
+    }
+
+    public class PositionsLevels
+    {
+        public double Cons { get; set; }
+        public double Medium { get; set; }
+        public double Agro { get; set; }
+        //public double LowerRangeCons { get; set; }
+        //public double LowerRangeMedium { get; set; }
+        //public double LowerRangeAgro { get; set; }
     }
 }

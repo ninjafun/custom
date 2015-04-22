@@ -372,6 +372,34 @@ namespace NinjaTrader.Strategy
                 MovingAverageType.HMA).FastMA[barsAgo];
         }
 
+        public PositionAction NtGetSlingShotTrend(int barsAgo)
+        {
+            double x = SlingShot(Color.Red, Color.Green, 38, PriceType.Close, MovingAverageType.HMA, 80, 63, PriceType.Close,
+                MovingAverageType.HMA).TrendDataSeries[barsAgo];
+            if (x > 1)
+            {
+                return PositionAction.ScaleInToLong;
+            }
+            if (x < -1)
+            {
+                return PositionAction.ScaleInToShort;
+            }
+            return PositionAction.DoNothing;
+        }
+        public PositionAction NtGetSlingShotTrend(IDataSeries ds, int barsAgo)
+        {
+            double x = SlingShot(ds, Color.Red, Color.Green, 38, PriceType.Close, MovingAverageType.HMA, 80, 63, PriceType.Close,
+                MovingAverageType.HMA).TrendDataSeries[barsAgo];
+
+            if (x > 1)
+                return PositionAction.ScaleInToLong;
+            
+            if (x < -1)
+                return PositionAction.ScaleInToShort;
+            
+            return PositionAction.DoNothing;
+        }
+
         public double NtGetFractalsLow(IDataSeries ds, int barsAgo)
         {
             return FractalLevel(ds, 1).Plot1[0];// .DownFractals[barsAgo];

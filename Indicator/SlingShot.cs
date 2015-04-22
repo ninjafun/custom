@@ -24,6 +24,8 @@ namespace NinjaTrader.Indicator
         private int _opacity = 80;
         private IDataSeries _slowInput;
         private IDataSeries _fastInput;
+        private DataSeries trendDataSeries;
+        private double pipsOffset = 0.0011;
 
         protected override void Initialize()
         {
@@ -36,6 +38,7 @@ namespace NinjaTrader.Indicator
             PaintPriceMarkers = false;
             Plots[0].Pen.Width = 2;
             Plots[1].Pen.Width = 2;
+            trendDataSeries = new DataSeries(this);
         }
 
         protected override void OnStartUp()
@@ -140,6 +143,38 @@ namespace NinjaTrader.Indicator
             }
             SlowMA.Set(s);
 
+            if (High[0] < SlowMA[0]
+                && High[0] < FastMA[0])
+            {
+                if (Math.Min(SlowMA[0], FastMA[0]) - High[0] > pipsOffset)
+                    trendDataSeries[0] = -1.1;
+                else
+                    if (trendDataSeries.ContainsValue(1))
+                        trendDataSeries[0] = trendDataSeries[1];
+            }
+            else if (Low[0] > SlowMA[0]
+                && Low[0] > FastMA[0])
+            {
+                if (Low[0] - Math.Max(SlowMA[0], FastMA[0]) > pipsOffset)
+                    trendDataSeries[0] = 1.1;
+                else
+                    if (trendDataSeries.ContainsValue(1))
+                        trendDataSeries[0] = trendDataSeries[1];
+            }
+            else
+            {
+                if (trendDataSeries.ContainsValue(1))
+                    trendDataSeries[0] = trendDataSeries[1];
+            }
+
+            if (trendDataSeries.ContainsValue(0))
+            {
+                //plot
+                if (trendDataSeries[0] > 1)
+                    DrawDiamond(CurrentBar + "dot", false, 0, High[0] + 25 * TickSize, Color.Green);
+                else if (trendDataSeries[0] < -1)
+                    DrawDiamond(CurrentBar + "dot", false, 0, Low[0] - 25 * TickSize, Color.Red);
+            }
         }
 
         #region Properties
@@ -253,6 +288,12 @@ namespace NinjaTrader.Indicator
             set { _bandAreaColorDown = Gui.Design.SerializableColor.FromString(value); }
         }
 
+        [Browsable(false)]	// this line prevents the data series from being displayed in the indicator properties dialog, do not remove
+        [XmlIgnore()]		// this line ensures that the indicator can be saved/recovered as part of a chart template, do not remove
+        public DataSeries TrendDataSeries
+        {
+            get { return trendDataSeries; }
+        }
         #endregion
 
         public override void Plot(Graphics graphics, Rectangle bounds, double min, double max)
