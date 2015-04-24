@@ -414,7 +414,7 @@ namespace NinjaTrader.Custom.Strategy
 
         private bool EnterNewPosition()
         {
-            if (_totalPositionQuantity < MaxTotalQty)
+            if (Math.Abs(_totalPositionQuantity) < MaxTotalQty)
             {
                 if (_desiredEntryDirection == PositionAction.ScaleInToLong)
                 {
@@ -487,13 +487,13 @@ namespace NinjaTrader.Custom.Strategy
                     {
                         if (NtBetween(_curBid, positionsLevels.Agro, positionsLevels.Medium))
                         {
-                            if (_totalPositionQuantity < 2000)
+                            if (Math.Abs(_totalPositionQuantity) < 2000)
                             {
                                 _execInProgress = true;
                                 Helper.Log(
                                     "Entered Agro position ScaleInToShort with Qty " +
                                     (2000 - _totalPositionQuantity), NLog.LogLevel.Debug);
-                                Helper.Log("Cur Bid is " + _curBid, NLog.LogLevel.Debug);
+                                Helper.Log("Cur Bid is " + _curBid + " while current _totalPositionQuantity is " + _totalPositionQuantity, NLog.LogLevel.Debug);
                                 _managedOrderList.Add(SubmitOrder(0, OrderAction.Sell, OrderType.Market,
                                     2000 - _totalPositionQuantity, 0, 0,
                                     "", ""));
@@ -506,7 +506,7 @@ namespace NinjaTrader.Custom.Strategy
 
                         if (NtBetween(_curBid, positionsLevels.Medium, positionsLevels.Cons))
                         {
-                            if (_totalPositionQuantity < 6000)
+                            if (Math.Abs(_totalPositionQuantity) < 6000)
                             {
                                 _execInProgress = true;
                                 Helper.Log(
@@ -761,18 +761,18 @@ namespace NinjaTrader.Custom.Strategy
                                  
                         //    }
                         //}
-                        _desiredEntryDirection = NtGetSlingShotTrend(Closes[0], 0);
+                        _desiredEntryDirection = NtGetSlingShotTrend(BarsArray[0], 0);
                         if (_desiredEntryDirection == PositionAction.ScaleInToLong)
                         {
-                            positionsLevels.Cons = Math.Min(NtGetSlingShotFast(0), NtGetSlingShotSlow(0))-0.0005;
-                            positionsLevels.Medium = Math.Max(NtGetSlingShotFast(0), NtGetSlingShotSlow(0));
-                            positionsLevels.Agro = Math.Max(NtGetSlingShotFast(0), NtGetSlingShotSlow(0)) + 0.0030;
+                            positionsLevels.Cons = Math.Min(_tVarSlingShotFast, _tVarSlingShotSlow) - 0.0005;
+                            positionsLevels.Medium = Math.Max(_tVarSlingShotFast, _tVarSlingShotSlow);
+                            positionsLevels.Agro = Math.Max(_tVarSlingShotFast, _tVarSlingShotSlow) + 0.0030;
                         }
                         else if (_desiredEntryDirection == PositionAction.ScaleInToShort)
                         {
-                            positionsLevels.Cons = Math.Max(NtGetSlingShotFast(0), NtGetSlingShotSlow(0)) + 0.0005;
-                            positionsLevels.Medium = Math.Min(NtGetSlingShotFast(0), NtGetSlingShotSlow(0));
-                            positionsLevels.Agro = Math.Min(NtGetSlingShotFast(0), NtGetSlingShotSlow(0)) - 0.0030;
+                            positionsLevels.Cons = Math.Max(_tVarSlingShotFast, _tVarSlingShotSlow) + 0.0005;
+                            positionsLevels.Medium = Math.Min(_tVarSlingShotFast, _tVarSlingShotSlow);
+                            positionsLevels.Agro = Math.Min(_tVarSlingShotFast, _tVarSlingShotSlow) - 0.0030;
                         }
                         Helper.Log(String.Format("positionsLevels.Cons = {0}," +
                                      "positionsLevels.Medium = {1}," +
